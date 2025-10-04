@@ -1,9 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Check, Loader2, AlertCircle, ChevronDown, Search, Wrench } from "lucide-react";
 import type { MessageResponse, ToolCall, Annotation } from "@shared/schema";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { useState } from "react";
 
 interface ResponseCardProps {
@@ -78,6 +80,7 @@ export function ResponseCard({ response, streamingText }: ResponseCardProps) {
           </div>
         ) : (
           <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
             components={{
               p: ({ children }) => <p className="mb-4 last:mb-0 leading-relaxed">{children}</p>,
               ul: ({ children }) => <ul className="list-disc list-inside mb-4 space-y-1">{children}</ul>,
@@ -87,6 +90,12 @@ export function ResponseCard({ response, streamingText }: ResponseCardProps) {
               h3: ({ children }) => <h3 className="text-base font-semibold mb-2 mt-4 first:mt-0">{children}</h3>,
               code: ({ children }) => <code className="font-mono text-sm bg-muted px-1.5 py-0.5 rounded">{children}</code>,
               pre: ({ children }) => <pre className="bg-muted p-4 rounded-lg overflow-x-auto mb-4 font-mono text-sm">{children}</pre>,
+              table: ({ children }) => <Table className="mb-4">{children}</Table>,
+              thead: ({ children }) => <TableHeader>{children}</TableHeader>,
+              tbody: ({ children }) => <TableBody>{children}</TableBody>,
+              tr: ({ children }) => <TableRow>{children}</TableRow>,
+              th: ({ children }) => <TableHead>{children}</TableHead>,
+              td: ({ children }) => <TableCell>{children}</TableCell>,
             }}
           >
             {displayContent || ""}
