@@ -17,7 +17,7 @@ import {
   type InsertUserCallConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, not, inArray, gte, lte } from "drizzle-orm";
+import { eq, and, desc, asc, not, inArray, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -235,27 +235,33 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getConversationsWithMessagesInDateRange(userId: string, startDate: Date, endDate: Date): Promise<any[]> {
-    // Get all conversations for the user within the date range
+    // Get all user's conversations
     const userConversations = await db
       .select()
       .from(conversations)
-      .where(
-        and(
-          eq(conversations.userId, userId),
-          gte(conversations.createdAt, startDate),
-          lte(conversations.createdAt, endDate)
-        )
-      )
+      .where(eq(conversations.userId, userId))
       .orderBy(desc(conversations.createdAt));
 
-    // For each conversation, get messages and their responses
+    // For each conversation, get messages within the date range
     const result = [];
     for (const conversation of userConversations) {
+      // Filter messages by timestamp within date range
       const conversationMessages = await db
         .select()
         .from(messages)
-        .where(eq(messages.conversationId, conversation.id))
-        .orderBy(messages.createdAt);
+        .where(
+          and(
+            eq(messages.conversationId, conversation.id),
+            gte(messages.timestamp, startDate),
+            lte(messages.timestamp, endDate)
+          )
+        )
+        .orderBy(asc(messages.timestamp));
+
+      // Skip conversations with no messages in the date range
+      if (conversationMessages.length === 0) {
+        continue;
+      }
 
       const messagesWithResponses = [];
       for (const message of conversationMessages) {
