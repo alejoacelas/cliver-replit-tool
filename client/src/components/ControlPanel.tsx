@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,11 @@ interface ControlPanelProps {
 export function ControlPanel({ open, onOpenChange, configs, onSave }: ControlPanelProps) {
   const [editingConfigs, setEditingConfigs] = useState<UserCallConfig[]>(configs);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  // Sync editing configs when props change
+  useEffect(() => {
+    setEditingConfigs(configs);
+  }, [configs]);
 
   const handleToggle = (id: string) => {
     setEditingConfigs(prev =>
