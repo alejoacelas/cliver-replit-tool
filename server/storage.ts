@@ -17,7 +17,7 @@ import {
   type InsertUserCallConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, not, inArray } from "drizzle-orm";
+import { eq, and, desc, not, inArray, gte, lte } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -47,6 +47,9 @@ export interface IStorage {
   updateUserCallConfig(id: string, updates: Partial<UserCallConfig>): Promise<UserCallConfig>;
   deleteUserCallConfig(id: string): Promise<void>;
   batchUpdateUserCallConfigs(userId: string, configs: UserCallConfig[]): Promise<void>;
+  
+  // Export operations
+  getConversationsWithMessagesInDateRange(userId: string, startDate: Date, endDate: Date): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -229,6 +232,51 @@ export class DatabaseStorage implements IStorage {
           },
         });
     }
+  }
+
+  async getConversationsWithMessagesInDateRange(userId: string, startDate: Date, endDate: Date): Promise<any[]> {
+    // Get all conversations for the user within the date range
+    const userConversations = await db
+      .select()
+      .from(conversations)
+      .where(
+        and(
+          eq(conversations.userId, userId),
+          gte(conversations.createdAt, startDate),
+          lte(conversations.createdAt, endDate)
+        )
+      )
+      .orderBy(desc(conversations.createdAt));
+
+    // For each conversation, get messages and their responses
+    const result = [];
+    for (const conversation of userConversations) {
+      const conversationMessages = await db
+        .select()
+        .from(messages)
+        .where(eq(messages.conversationId, conversation.id))
+        .orderBy(messages.createdAt);
+
+      const messagesWithResponses = [];
+      for (const message of conversationMessages) {
+        const responses = await db
+          .select()
+          .from(messageResponses)
+          .where(eq(messageResponses.messageId, message.id));
+
+        messagesWithResponses.push({
+          ...message,
+          responses,
+        });
+      }
+
+      result.push({
+        ...conversation,
+        messages: messagesWithResponses,
+      });
+    }
+
+    return result;
   }
 }
 
