@@ -30,11 +30,10 @@ export default function Landing() {
               <Sparkles className="w-8 h-8 text-primary" />
             </div>
             <h2 className="text-4xl font-semibold tracking-tight mb-4">
-              AI-Powered Customer Research
+              AI-Powered Customer Screening
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Get instant, comprehensive background research on customers with multi-model AI analysis. 
-              Simultaneous insights from multiple AI models, real-time streaming, and intelligent screening.
+            Speed up customer onboarding and follow-up screening with automated customer reports. Flag potential issues in minutes, not hours.
             </p>
           </div>
 
@@ -51,8 +50,8 @@ export default function Landing() {
             </Card>
 
             <Card className="p-6 hover-elevate">
-              <div className="w-10 h-10 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
-                <Search className="w-5 h-5 text-chart-2" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Search className="w-5 h-5 text-primary" />
               </div>
               <h3 className="font-semibold mb-2">Web Search Integration</h3>
               <p className="text-sm text-muted-foreground">
@@ -61,8 +60,8 @@ export default function Landing() {
             </Card>
 
             <Card className="p-6 hover-elevate">
-              <div className="w-10 h-10 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
-                <Shield className="w-5 h-5 text-chart-3" />
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Shield className="w-5 h-5 text-primary" />
               </div>
               <h3 className="font-semibold mb-2">Configurable Workflows</h3>
               <p className="text-sm text-muted-foreground">
