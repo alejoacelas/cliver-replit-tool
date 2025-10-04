@@ -189,13 +189,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Configs must be an array" });
       }
 
-      // Verify all configs belong to this user
-      const allOwnedByUser = configs.every(c => c.userId === userId);
-      if (!allOwnedByUser) {
-        return res.status(403).json({ message: "Cannot modify other users' configs" });
+      // Verify all configs belong to this user (only check if array is not empty)
+      if (configs.length > 0) {
+        const allOwnedByUser = configs.every(c => c.userId === userId);
+        if (!allOwnedByUser) {
+          return res.status(403).json({ message: "Cannot modify other users' configs" });
+        }
       }
 
-      await storage.batchUpdateUserCallConfigs(configs);
+      await storage.batchUpdateUserCallConfigs(userId, configs);
 
       const updatedConfigs = await storage.getUserCallConfigs(userId);
       res.json(updatedConfigs);

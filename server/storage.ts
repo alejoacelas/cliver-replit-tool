@@ -17,7 +17,7 @@ import {
   type InsertUserCallConfig,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, not, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -46,7 +46,7 @@ export interface IStorage {
   createUserCallConfig(config: InsertUserCallConfig): Promise<UserCallConfig>;
   updateUserCallConfig(id: string, updates: Partial<UserCallConfig>): Promise<UserCallConfig>;
   deleteUserCallConfig(id: string): Promise<void>;
-  batchUpdateUserCallConfigs(configs: UserCallConfig[]): Promise<void>;
+  batchUpdateUserCallConfigs(userId: string, configs: UserCallConfig[]): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -188,31 +188,43 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userCallConfigs.id, id));
   }
 
-  async batchUpdateUserCallConfigs(configs: UserCallConfig[]): Promise<void> {
-    // Delete configs that are no longer in the list
+  async batchUpdateUserCallConfigs(userId: string, configs: UserCallConfig[]): Promise<void> {
     const configIds = configs.map(c => c.id);
-    const userId = configs[0]?.userId;
-    
-    if (userId) {
+
+    // Delete configs that are no longer in the list
+    if (configIds.length > 0) {
+      // Delete configs not in the provided list
       await db
         .delete(userCallConfigs)
         .where(
           and(
             eq(userCallConfigs.userId, userId),
-            // Delete if id is not in the list
+            not(inArray(userCallConfigs.id, configIds))
           )
         );
+    } else {
+      // If configs array is empty, delete all configs for this user
+      await db
+        .delete(userCallConfigs)
+        .where(eq(userCallConfigs.userId, userId));
     }
 
     // Upsert all configs
     for (const config of configs) {
+      // Convert date strings to Date objects
+      const configToSave = {
+        ...config,
+        createdAt: config.createdAt ? new Date(config.createdAt) : new Date(),
+        updatedAt: new Date(),
+      };
+      
       await db
         .insert(userCallConfigs)
-        .values(config)
+        .values(configToSave)
         .onConflictDoUpdate({
           target: userCallConfigs.id,
           set: {
-            ...config,
+            ...configToSave,
             updatedAt: new Date(),
           },
         });
