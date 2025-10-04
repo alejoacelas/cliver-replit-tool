@@ -106,6 +106,12 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
+      // Invalidate conversations immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      // Invalidate again after 2 seconds to pick up title inference (happens in background)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      }, 2000);
       setInput("");
     },
     onError: (error: Error) => {

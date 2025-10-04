@@ -9,7 +9,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export async function inferCustomerInfo(messageText: string): Promise<{ customerName: string; institution: string }> {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini", // Using gpt-4o-mini for fast, efficient inference
+      model: "gpt-4.1-nano", // Using gpt-4.1-nano as specified for customer info extraction
       messages: [
         {
           role: "system",
