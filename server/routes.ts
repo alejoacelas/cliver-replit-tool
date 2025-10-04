@@ -239,7 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               for (const response of message.responses) {
                 const row = [
                   `"${conversation.title.replace(/"/g, '""')}"`,
-                  message.createdAt.toISOString(),
+                  message.timestamp.toISOString(),
                   message.role,
                   `"${message.content.replace(/"/g, '""')}"`,
                   response.model || '',
@@ -251,7 +251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } else {
               const row = [
                 `"${conversation.title.replace(/"/g, '""')}"`,
-                message.createdAt.toISOString(),
+                message.timestamp.toISOString(),
                 message.role,
                 `"${message.content.replace(/"/g, '""')}"`,
                 '',
@@ -277,7 +277,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               for (const response of message.responses) {
                 rows.push({
                   'Conversation Title': conversation.title,
-                  'Message Date': message.createdAt,
+                  'Message Date': message.timestamp,
                   'Message Role': message.role,
                   'Message Content': message.content,
                   'Response Model': response.model || '',
@@ -288,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } else {
               rows.push({
                 'Conversation Title': conversation.title,
-                'Message Date': message.createdAt,
+                'Message Date': message.timestamp,
                 'Message Role': message.role,
                 'Message Content': message.content,
                 'Response Model': '',
