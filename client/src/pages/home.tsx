@@ -44,11 +44,19 @@ export default function Home() {
     retry: false,
   });
 
-  // Fetch active conversation messages
+  // Fetch active conversation messages with polling for streaming responses
   const { data: messages = [] } = useQuery<(Message & { responses: MessageResponse[] })[]>({
     queryKey: ["/api/conversations", activeConversationId, "messages"],
     enabled: !!activeConversationId,
     retry: false,
+    refetchInterval: (query) => {
+      // Poll every 1 second if there are streaming responses
+      const data = query.state.data;
+      const hasStreamingResponses = data?.some(msg => 
+        msg.responses?.some(r => r.status === "streaming")
+      );
+      return hasStreamingResponses ? 1000 : false;
+    },
   });
 
   // Fetch user call configs
