@@ -5,6 +5,41 @@ import type { MCPTool, SimplifiedResponse, ToolCall, Annotation } from "@shared/
 // the newest OpenAI model is "gpt-5" which was released August 7, 2025. do not change this unless explicitly requested by the user
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+// Infer customer name and institution from message text
+export async function inferCustomerInfo(messageText: string): Promise<{ customerName: string; institution: string }> {
+  try {
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini", // Using gpt-4o-mini for fast, efficient inference
+      messages: [
+        {
+          role: "system",
+          content: "You are a helpful assistant that extracts customer information from text. Extract the customer's name and institution/company name. Respond ONLY with a JSON object in this exact format: {\"customerName\": \"name or Unknown client\", \"institution\": \"institution or Unknown institution\"}. If information is not found, use the default values."
+        },
+        {
+          role: "user",
+          content: messageText
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 100,
+    });
+
+    const responseText = completion.choices[0]?.message?.content || '{}';
+    const parsed = JSON.parse(responseText);
+    
+    return {
+      customerName: parsed.customerName || "Unknown client",
+      institution: parsed.institution || "Unknown institution"
+    };
+  } catch (error) {
+    console.error("Error inferring customer info:", error);
+    return {
+      customerName: "Unknown client",
+      institution: "Unknown institution"
+    };
+  }
+}
+
 // Hardcoded MCP tools as specified by user
 const HARDCODED_MCP_TOOLS: MCPTool[] = [
   {

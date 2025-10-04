@@ -2,7 +2,7 @@ import type { Express, Request, Response } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { streamOpenAIResponse } from "./openai";
+import { streamOpenAIResponse, inferCustomerInfo } from "./openai";
 import type { UserCallConfig } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -106,6 +106,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         role: "user",
         content,
       });
+
+      // Check if this is the first message in the conversation
+      const allMessages = await storage.getMessages(conversationId);
+      const isFirstMessage = allMessages.length === 1;
+
+      // If first message, infer and update conversation title
+      if (isFirstMessage) {
+        inferAndUpdateConversationTitle(conversationId, content);
+      }
 
       // Get user's enabled call configs
       const allConfigs = await storage.getUserCallConfigs(userId);
@@ -314,4 +323,21 @@ async function triggerStreamingResponses(
   Promise.all(streamPromises).catch(err => {
     console.error('Error in streaming responses:', err);
   });
+}
+
+// Helper function to infer and update conversation title
+async function inferAndUpdateConversationTitle(conversationId: string, messageContent: string) {
+  try {
+    const { customerName, institution } = await inferCustomerInfo(messageContent);
+    const newTitle = `${customerName} - ${institution}`;
+    
+    await storage.updateConversation(conversationId, {
+      title: newTitle,
+      updatedAt: new Date(),
+    });
+    
+    console.log(`Updated conversation ${conversationId} title to: ${newTitle}`);
+  } catch (error) {
+    console.error('Error inferring conversation title:', error);
+  }
 }

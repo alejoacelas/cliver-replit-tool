@@ -19,9 +19,10 @@ interface ControlPanelProps {
   onOpenChange: (open: boolean) => void;
   configs: UserCallConfig[];
   onSave: (configs: UserCallConfig[]) => void;
+  userId: string;
 }
 
-export function ControlPanel({ open, onOpenChange, configs, onSave }: ControlPanelProps) {
+export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: ControlPanelProps) {
   const [editingConfigs, setEditingConfigs] = useState<UserCallConfig[]>(configs);
   const [editingId, setEditingId] = useState<string | null>(null);
 
@@ -56,7 +57,7 @@ export function ControlPanel({ open, onOpenChange, configs, onSave }: ControlPan
   const handleAddNew = () => {
     const newConfig: UserCallConfig = {
       id: crypto.randomUUID(),
-      userId: configs[0]?.userId || '',
+      userId: userId,
       displayName: 'New Configuration',
       model: 'gpt-5',
       systemPrompt: null,
