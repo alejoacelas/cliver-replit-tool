@@ -1,0 +1,98 @@
+app.post('/api/stream', async (req: Request, res: Response) => {
+  try {
+    const { model, input, reasoning_effort, previous_response_id, instructions, saveToCache } = req.body;
+    
+    if (!model || !input) {
+      return res.status(400).json({ error: 'Model and input are required' });
+    }
+    
+    // Build request parameters (without stream for cache key)
+    const requestParams: any = {
+      model,
+      input,
+      tools: buildTools(HARDCODED_MCP_TOOLS, true), // Always include web search
+    };
+    
+    // Add reasoning if model supports it
+    if (shouldIncludeReasoning(model) && reasoning_effort) {
+      requestParams.reasoning = { effort: reasoning_effort };
+    }
+    
+    // Add instructions or prompt ID
+    if (instructions) {
+      requestParams.instructions = instructions;
+    } else {
+      requestParams.prompt = { id: DEFAULT_PROMPT_ID };
+    }
+    
+    // Add previous response ID if provided
+    if (previous_response_id) {
+      requestParams.previous_response_id = previous_response_id;
+    }
+
+    // Check cache first
+    const cacheKey = generateCacheKey(requestParams);
+    const cachedResponse = responseCache.get(cacheKey);
+
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    if (cachedResponse) {
+      console.log('Cache hit for streaming request');
+      // Send cached response immediately as complete
+      res.write(`data: ${JSON.stringify({ type: 'complete', response: cachedResponse })}\n\n`);
+      res.write('data: [DONE]\n\n');
+      res.end();
+      return;
+    }
+
+    console.log('Cache miss - making streaming API call');
+
+    // Add stream flag for actual API call
+    requestParams.stream = true;
+
+    let completeResponse: any = null;
+
+    // Make streaming API call
+    const stream = await openai.responses.create(requestParams) as any;
+
+    for await (const event of stream) {
+      // Capture complete response when streaming finishes
+      if (event.type === 'response.completed') {
+        completeResponse = event.response;
+      }
+
+      // Send text deltas for streaming
+      if (event.type === 'response.output_text.delta') {
+        res.write(`data: ${JSON.stringify({ type: 'delta', content: event.delta })}\n\n`);
+      }
+    }
+
+    // Send complete response data when streaming finishes
+    if (completeResponse) {
+      const simplifiedResponse = extractResponseData(completeResponse);
+
+      // Save to cache if requested
+      if (saveToCache) {
+        responseCache.set(cacheKey, simplifiedResponse);
+        console.log('Streaming response saved to cache');
+      }
+
+      res.write(`data: ${JSON.stringify({ type: 'complete', response: simplifiedResponse })}\n\n`);
+    }
+    
+    res.write('data: [DONE]\n\n');
+    res.end();
+    
+  } catch (error) {
+    console.error('Error in /api/stream:', error);
+    res.write(`data: ${JSON.stringify({ type: 'error', error: 'Internal server error' })}\n\n`);
+    res.end();
+  }
+});

@@ -1,0 +1,135 @@
+Core Architecture (MVP)
+1. Multi-Response System
+Single user query triggers multiple simultaneous AI calls
+Each call configuration defines:
+Model (e.g., gpt-5, o3)
+System prompt/instructions
+Reasoning effort
+Web search enabled/disabled
+top_p parameter
+Display name (shown to user)
+Responses display in separate, collapsible cards
+Real-time streaming for each response independently
+2. Account System
+Standard authentication (email/password via Supabase Auth)
+Per-account data:
+Chat history with conversation threads
+Saved call configurations (the "control panel" settings)
+Sidebar chat history (like ChatGPT/Claude)
+3. Control Panel (Developer Mode)
+Per-account configuration editor
+Add/remove/edit call configurations:
+ interface CallConfig {  id: string;  displayName: string;  // Shows to user on response card  model: string;  systemPrompt: string;  reasoningEffort: 'low' | 'medium' | 'high';  webSearchEnabled: boolean;  topP?: number;  responseMode: 'markdown' | 'json-field';  // If json-field, extract "final_response"  enabled: boolean;  // Can toggle on/off without deleting}
+
+
+Default call (non-editable but can be duplicated):
+Uses existing MCP tools + web search
+Preserves current tool descriptions
+4. Response Rendering
+Markdown mode: Render full response as markdown
+JSON field mode: Parse response, extract & render only response.final_response field
+Show metadata (model used, tokens, timing) in card header/footer
+
+Data Model (Simplified)
+// User accounts
+interface User {
+  id: string;
+  email: string;
+  createdAt: Date;
+}
+
+// Conversation threads
+interface Conversation {
+  id: string;
+  userId: string;
+  title: string;  // Auto-generated from first message
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Individual messages
+interface Message {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;  // User input
+  responses?: MessageResponse[];  // Multiple AI responses
+  timestamp: Date;
+}
+
+// Multiple responses per message
+interface MessageResponse {
+  id: string;
+  messageId: string;
+  callConfigId: string;  // Which config generated this
+  displayName: string;
+  content: string;  // Raw response
+  renderedContent: string;  // Processed for display
+  toolCalls?: ToolCall[];
+  metadata: {
+    model: string;
+    tokens: number;
+    duration: number;
+  };
+}
+
+// Saved configurations per user
+interface UserCallConfig {
+  id: string;
+  userId: string;
+  displayName: string;
+  model: string;
+  systemPrompt: string;
+  reasoningEffort: string;
+  webSearchEnabled: boolean;
+  topP?: number;
+  responseMode: 'markdown' | 'json-field';
+  enabled: boolean;
+  order: number;  // Display order
+}
+
+
+UI Structure (Simplified)
+┌─────────────────────────────────────────────────────┐
+│ [☰] AI Background Check         [⚙️ Control Panel] │
+├──────────┬──────────────────────────────────────────┤
+│          │                                          │
+│ Sidebar  │  Main Chat Area                         │
+│          │                                          │
+│ • Chat 1 │  User: [paste info]                    │
+│ • Chat 2 │                                         │
+│ • Chat 3 │  ┌─ Response: Default Analysis ────┐  │
+│          │  │ [streaming text...]              │  │
+│ [+New]   │  └──────────────────────────────────┘  │
+│          │                                         │
+│          │  ┌─ Response: Deep Research ───────┐  │
+│          │  │ [streaming text...]              │  │
+│          │  └──────────────────────────────────┘  │
+│          │                                         │
+│          │  [Input box for follow-up]             │
+└──────────┴──────────────────────────────────────────┘
+
+Control Panel (Modal/Sidebar):
+┌─ Configure AI Calls ────────────────────────┐
+│                                             │
+│ Default Analysis (locked) ✓                │
+│ ├─ Model: gpt-5                            │
+│ ├─ Web Search: ✓  MCP Tools: ✓            │
+│ └─ [Duplicate]                             │
+│                                             │
+│ Deep Research ✓                            │
+│ ├─ Model: o3                               │
+│ ├─ Reasoning: high                         │
+│ ├─ Web Search: ✓                           │
+│ ├─ Response: markdown                      │
+│ └─ [Edit] [Delete] [↑] [↓]                │
+│                                             │
+│ Quick Summary ✗ (disabled)                 │
+│ ├─ Model: gpt-4.1-mini                     │
+│ └─ [Edit] [Delete] [Enable]               │
+│                                             │
+│ [+ Add New Call Configuration]             │
+│                                             │
+│ [Save] [Cancel]                            │
+└─────────────────────────────────────────────┘
+

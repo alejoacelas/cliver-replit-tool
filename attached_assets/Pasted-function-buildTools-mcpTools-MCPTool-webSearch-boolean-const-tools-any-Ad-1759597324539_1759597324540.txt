@@ -1,0 +1,112 @@
+function buildTools(mcpTools: MCPTool[], webSearch: boolean) {
+  const tools: any[] = [];
+  
+  // Add MCP tools
+  mcpTools.forEach(mcpTool => {
+    tools.push({
+      type: "mcp",
+      server_label: mcpTool.server_label,
+      server_url: mcpTool.server_url,
+      require_approval: mcpTool.require_approval
+    });
+  });
+  
+  // Add web search
+  if (webSearch) {
+    tools.push({
+      type: "web_search"
+    });
+  }
+  
+  return tools;
+}
+
+function extractResponseData(response: any): SimplifiedResponse {
+  const toolCalls: ToolCall[] = [];
+  const annotations: Annotation[] = [];
+  let text = "";
+  let webSearchQueries: string[] = [];
+  let webSearchAnnotations: Annotation[] = [];
+
+  // Extract from response.output array
+  if (response.output) {
+    for (const outputItem of response.output) {
+      if (outputItem.type === 'message') {
+        // Extract text and annotations from message content
+        for (const contentItem of outputItem.content || []) {
+          if (contentItem.type === 'output_text') {
+            text = contentItem.text || '';
+
+            // Extract annotations for web search results
+            for (const annotation of contentItem.annotations || []) {
+              const processedAnnotation = {
+                type: annotation.type || 'unknown',
+                content: annotation.title || annotation.text || '',
+                source: annotation.url || annotation.source || ''
+              };
+
+              // If it's a URL citation, treat it as a web search result
+              if (annotation.type === 'url_citation') {
+                webSearchAnnotations.push(processedAnnotation);
+              } else {
+                annotations.push(processedAnnotation);
+              }
+            }
+          }
+        }
+      }
+      // Handle web search calls - collect queries
+      else if (outputItem.type === 'web_search_call') {
+        if (outputItem.action && outputItem.action.query) {
+          webSearchQueries.push(outputItem.action.query);
+        }
+      }
+      // Handle MCP calls
+      else if (outputItem.type === 'mcp_call') {
+        toolCalls.push({
+          name: outputItem.name || 'mcp_tool',
+          arguments: outputItem.arguments || {},
+          output: outputItem.output || null
+        });
+      }
+      // Handle function calls
+      else if (outputItem.type === 'function_call') {
+        toolCalls.push({
+          name: outputItem.name || 'function',
+          arguments: outputItem.arguments || {},
+          output: outputItem.output || null
+        });
+      }
+    }
+  }
+
+  // Create web search tool call if we found web search activity
+  if (webSearchQueries.length > 0 || webSearchAnnotations.length > 0) {
+    toolCalls.push({
+      name: 'web_search',
+      arguments: {
+        queries: webSearchQueries,
+        status: 'completed'
+      },
+      output: webSearchAnnotations
+    });
+  }
+
+  // Fallback to response.text if no text found
+  if (!text && response.text) {
+    text = response.text;
+  }
+
+  return {
+    text,
+    tool_calls: toolCalls,
+    annotations,
+    response_id: response.id,
+    usage: response.usage ? {
+      total_tokens: response.usage.total_tokens,
+      input_tokens: response.usage.input_tokens,
+      output_tokens: response.usage.output_tokens,
+    } : undefined,
+    model: response.model
+  };
+}
