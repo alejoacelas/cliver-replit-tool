@@ -69,10 +69,13 @@ export default function Home() {
   // Create conversation mutation
   const createConversationMutation = useMutation({
     mutationFn: async (title: string) => {
-      return await apiRequest<Conversation>("POST", "/api/conversations", { title });
+      const res = await apiRequest("POST", "/api/conversations", { title });
+      return await res.json() as Conversation;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      // Clear previous conversation's messages from cache
+      queryClient.removeQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
       setActiveConversationId(data.id);
     },
     onError: (error: Error) => {
@@ -98,7 +101,8 @@ export default function Home() {
   // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
-      return await apiRequest<{ message: Message }>("POST", `/api/conversations/${conversationId}/messages`, { content });
+      const res = await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { content });
+      return await res.json() as { message: Message };
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
@@ -342,6 +346,7 @@ export default function Home() {
         open={controlPanelOpen}
         onOpenChange={setControlPanelOpen}
         configs={callConfigs}
+        userId={user?.id || ''}
         onSave={(configs) => updateCallConfigsMutation.mutate(configs)}
       />
     </SidebarProvider>
