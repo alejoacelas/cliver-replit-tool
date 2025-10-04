@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { streamOpenAIResponse, inferCustomerInfo } from "./openai";
 import type { UserCallConfig } from "@shared/schema";
+import * as XLSX from "xlsx";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -204,6 +205,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating call configs:", error);
       res.status(500).json({ message: "Failed to update call configs" });
+    }
+  });
+
+  // Export chat history
+  app.get('/api/export', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const { format, startDate, endDate } = req.query;
+
+      if (!format || !startDate || !endDate) {
+        return res.status(400).json({ message: "Format, startDate, and endDate are required" });
+      }
+
+      const start = new Date(startDate as string);
+      const end = new Date(endDate as string);
+
+      // Validate dates
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        return res.status(400).json({ message: "Invalid date format" });
+      }
+
+      const data = await storage.getConversationsWithMessagesInDateRange(userId, start, end);
+
+      if (format === 'csv') {
+        // Generate CSV
+        const csvRows: string[] = [];
+        csvRows.push('Conversation Title,Message Date,Message Role,Message Content,Response Model,Response Content,Response Status');
+
+        for (const conversation of data) {
+          for (const message of conversation.messages) {
+            if (message.responses && message.responses.length > 0) {
+              for (const response of message.responses) {
+                const row = [
+                  `"${conversation.title.replace(/"/g, '""')}"`,
+                  message.createdAt.toISOString(),
+                  message.role,
+                  `"${message.content.replace(/"/g, '""')}"`,
+                  response.model || '',
+                  `"${(response.content || '').replace(/"/g, '""')}"`,
+                  response.status
+                ].join(',');
+                csvRows.push(row);
+              }
+            } else {
+              const row = [
+                `"${conversation.title.replace(/"/g, '""')}"`,
+                message.createdAt.toISOString(),
+                message.role,
+                `"${message.content.replace(/"/g, '""')}"`,
+                '',
+                '',
+                ''
+              ].join(',');
+              csvRows.push(row);
+            }
+          }
+        }
+
+        const csv = csvRows.join('\n');
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="chat-history-${Date.now()}.csv"`);
+        res.send(csv);
+      } else if (format === 'excel') {
+        // Generate Excel
+        const rows: any[] = [];
+        
+        for (const conversation of data) {
+          for (const message of conversation.messages) {
+            if (message.responses && message.responses.length > 0) {
+              for (const response of message.responses) {
+                rows.push({
+                  'Conversation Title': conversation.title,
+                  'Message Date': message.createdAt,
+                  'Message Role': message.role,
+                  'Message Content': message.content,
+                  'Response Model': response.model || '',
+                  'Response Content': response.content || '',
+                  'Response Status': response.status
+                });
+              }
+            } else {
+              rows.push({
+                'Conversation Title': conversation.title,
+                'Message Date': message.createdAt,
+                'Message Role': message.role,
+                'Message Content': message.content,
+                'Response Model': '',
+                'Response Content': '',
+                'Response Status': ''
+              });
+            }
+          }
+        }
+
+        const worksheet = XLSX.utils.json_to_sheet(rows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Chat History');
+
+        const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+        
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="chat-history-${Date.now()}.xlsx"`);
+        res.send(excelBuffer);
+      } else {
+        return res.status(400).json({ message: "Invalid format. Use 'csv' or 'excel'" });
+      }
+    } catch (error) {
+      console.error("Error exporting chat history:", error);
+      res.status(500).json({ message: "Failed to export chat history" });
     }
   });
 

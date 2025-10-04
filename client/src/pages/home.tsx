@@ -8,10 +8,11 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, S
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Settings, Send, Loader2 } from "lucide-react";
+import { Sparkles, Plus, Settings, Send, Loader2, Download } from "lucide-react";
 import { ConversationList } from "@/components/ConversationList";
 import { ResponseCard } from "@/components/ResponseCard";
 import { ControlPanel } from "@/components/ControlPanel";
+import { ExportDialog } from "@/components/ExportDialog";
 import type { Conversation, Message, MessageResponse, UserCallConfig } from "@shared/schema";
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [input, setInput] = useState("");
   const [controlPanelOpen, setControlPanelOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -256,6 +258,14 @@ export default function Home() {
               <Button
                 variant="outline"
                 size="icon"
+                onClick={() => setExportDialogOpen(true)}
+                data-testid="button-export"
+              >
+                <Download className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
                 onClick={() => setControlPanelOpen(true)}
                 data-testid="button-control-panel"
               >
@@ -354,6 +364,12 @@ export default function Home() {
         configs={callConfigs}
         userId={user?.id || ''}
         onSave={(configs) => updateCallConfigsMutation.mutate(configs)}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        open={exportDialogOpen}
+        onOpenChange={setExportDialogOpen}
       />
     </SidebarProvider>
   );
