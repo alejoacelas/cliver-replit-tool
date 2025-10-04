@@ -5,6 +5,7 @@ import { setupAuth, isAuthenticated } from "./replitAuth";
 import { streamOpenAIResponse, inferCustomerInfo } from "./openai";
 import type { UserCallConfig } from "@shared/schema";
 import * as XLSX from "xlsx";
+import { DEFAULT_CONFIG } from "./prompt";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -160,16 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (configs.length === 0) {
         const defaultConfig = await storage.createUserCallConfig({
           userId,
-          displayName: "Default Analysis",
-          model: "gpt-5",
-          systemPrompt: "You are a helpful AI assistant specialized in customer background research. Provide comprehensive, accurate, and actionable insights.",
-          reasoningEffort: null,
-          webSearchEnabled: true,
-          topP: null,
-          responseMode: "markdown",
-          enabled: true,
-          order: 0,
-          isDefault: true,
+          ...DEFAULT_CONFIG,
         });
         configs = [defaultConfig];
       }
