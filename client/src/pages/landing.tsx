@@ -74,14 +74,14 @@ export default function Landing() {
           <div className="text-center">
             <Button
               size="lg"
-              onClick={() => window.location.href = '/api/login'}
+              onClick={() => window.location.href = '/api/guest-login'}
               className="px-8"
               data-testid="button-get-started"
             >
               Get Started
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Sign in to start researching
+              Try it now, no sign-in required
             </p>
           </div>
         </div>

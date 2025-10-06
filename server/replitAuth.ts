@@ -126,12 +126,44 @@ export async function setupAuth(app: Express) {
       );
     });
   });
+
+  app.get("/api/guest-login", async (req, res) => {
+    try {
+      const guestUser = await storage.upsertUser({
+        isGuest: true,
+      });
+      
+      (req as any).user = {
+        claims: { sub: guestUser.id },
+        isGuest: true,
+      };
+      
+      req.login((req as any).user, (err) => {
+        if (err) {
+          console.error("Error creating guest session:", err);
+          return res.status(500).json({ message: "Failed to create guest session" });
+        }
+        res.redirect("/");
+      });
+    } catch (error) {
+      console.error("Error creating guest user:", error);
+      res.status(500).json({ message: "Failed to create guest user" });
+    }
+  });
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  if (user.isGuest) {
+    return next();
+  }
+
+  if (!user.expires_at) {
     return res.status(401).json({ message: "Unauthorized" });
   }
 

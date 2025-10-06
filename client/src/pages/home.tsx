@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
+import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -241,6 +241,17 @@ export default function Home() {
               />
             </ScrollArea>
           </SidebarContent>
+          {user?.isGuest && (
+            <SidebarFooter className="border-t border-sidebar-border p-4">
+              <button
+                onClick={() => window.location.href = '/api/login'}
+                className="w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
+                data-testid="button-guest-signin-prompt"
+              >
+                Sign in to save your conversations
+              </button>
+            </SidebarFooter>
+          )}
         </Sidebar>
 
         {/* Main Content */}
@@ -273,10 +284,10 @@ export default function Home() {
               </Button>
               <Button
                 variant="ghost"
-                onClick={() => window.location.href = '/api/logout'}
-                data-testid="button-logout"
+                onClick={() => window.location.href = user?.isGuest ? '/api/login' : '/api/logout'}
+                data-testid={user?.isGuest ? "button-signin" : "button-logout"}
               >
-                Log Out
+                {user?.isGuest ? "Sign In" : "Log Out"}
               </Button>
             </div>
           </header>
