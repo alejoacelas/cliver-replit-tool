@@ -5,6 +5,9 @@ import {
   messages,
   messageResponses,
   userCallConfigs,
+  apiKeys,
+  apiRequests,
+  apiRequestResponses,
   type User,
   type UpsertUser,
   type Conversation,
@@ -15,9 +18,15 @@ import {
   type InsertMessageResponse,
   type UserCallConfig,
   type InsertUserCallConfig,
+  type ApiKey,
+  type InsertApiKey,
+  type ApiRequest,
+  type InsertApiRequest,
+  type ApiRequestResponse,
+  type InsertApiRequestResponse,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, asc, not, inArray, gte, lte } from "drizzle-orm";
+import { eq, and, desc, asc, not, inArray, gte, lte, isNull, sql } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -50,6 +59,29 @@ export interface IStorage {
   
   // Export operations
   getConversationsWithMessagesInDateRange(userId: string, startDate: Date, endDate: Date): Promise<any[]>;
+  
+  // API Key operations
+  getApiKeys(userId: string): Promise<ApiKey[]>;
+  getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  createApiKey(key: InsertApiKey): Promise<ApiKey>;
+  revokeApiKey(id: string): Promise<void>;
+  updateApiKeyLastUsed(id: string): Promise<void>;
+  
+  // API Request operations
+  getApiRequests(userId: string, options?: { status?: string; limit?: number; offset?: number; startDate?: Date; endDate?: Date }): Promise<{ requests: ApiRequest[]; total: number }>;
+  getApiRequest(id: string): Promise<ApiRequest | undefined>;
+  createApiRequest(request: InsertApiRequest): Promise<ApiRequest>;
+  updateApiRequest(id: string, updates: Partial<ApiRequest>): Promise<ApiRequest>;
+  countPendingRequests(userId: string): Promise<number>;
+  
+  // API Request Response operations
+  getApiRequestResponses(requestId: string): Promise<ApiRequestResponse[]>;
+  createApiRequestResponse(response: InsertApiRequestResponse): Promise<ApiRequestResponse>;
+  updateApiRequestResponse(id: string, updates: Partial<ApiRequestResponse>): Promise<ApiRequestResponse>;
+  
+  // User call config operations (for API)
+  getUserCallConfig(id: string): Promise<UserCallConfig | undefined>;
+  getUserCallConfigsByIds(userId: string, ids: string[]): Promise<UserCallConfig[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -283,6 +315,171 @@ export class DatabaseStorage implements IStorage {
     }
 
     return result;
+  }
+
+  // API Key operations
+  async getApiKeys(userId: string): Promise<ApiKey[]> {
+    return await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.userId, userId))
+      .orderBy(desc(apiKeys.createdAt));
+  }
+
+  async getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined> {
+    const [key] = await db
+      .select()
+      .from(apiKeys)
+      .where(and(
+        eq(apiKeys.keyHash, keyHash),
+        isNull(apiKeys.revokedAt)
+      ));
+    return key;
+  }
+
+  async createApiKey(key: InsertApiKey): Promise<ApiKey> {
+    const [created] = await db
+      .insert(apiKeys)
+      .values(key)
+      .returning();
+    return created;
+  }
+
+  async revokeApiKey(id: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({ revokedAt: new Date() })
+      .where(eq(apiKeys.id, id));
+  }
+
+  async updateApiKeyLastUsed(id: string): Promise<void> {
+    await db
+      .update(apiKeys)
+      .set({ lastUsedAt: new Date() })
+      .where(eq(apiKeys.id, id));
+  }
+
+  // API Request operations
+  async getApiRequests(
+    userId: string, 
+    options?: { status?: string; limit?: number; offset?: number; startDate?: Date; endDate?: Date }
+  ): Promise<{ requests: ApiRequest[]; total: number }> {
+    const { status, limit = 50, offset = 0, startDate, endDate } = options || {};
+    
+    const conditions = [eq(apiRequests.userId, userId)];
+    if (status) {
+      conditions.push(eq(apiRequests.status, status));
+    }
+    if (startDate) {
+      conditions.push(gte(apiRequests.createdAt, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(apiRequests.createdAt, endDate));
+    }
+
+    const whereClause = conditions.length > 1 ? and(...conditions) : conditions[0];
+
+    const [requests, totalResult] = await Promise.all([
+      db
+        .select()
+        .from(apiRequests)
+        .where(whereClause)
+        .orderBy(desc(apiRequests.createdAt))
+        .limit(Math.min(limit, 100))
+        .offset(offset),
+      db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(apiRequests)
+        .where(whereClause)
+    ]);
+
+    return {
+      requests,
+      total: totalResult[0]?.count || 0
+    };
+  }
+
+  async getApiRequest(id: string): Promise<ApiRequest | undefined> {
+    const [request] = await db
+      .select()
+      .from(apiRequests)
+      .where(eq(apiRequests.id, id));
+    return request;
+  }
+
+  async createApiRequest(request: InsertApiRequest): Promise<ApiRequest> {
+    const [created] = await db
+      .insert(apiRequests)
+      .values(request)
+      .returning();
+    return created;
+  }
+
+  async updateApiRequest(id: string, updates: Partial<ApiRequest>): Promise<ApiRequest> {
+    const [updated] = await db
+      .update(apiRequests)
+      .set(updates)
+      .where(eq(apiRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  async countPendingRequests(userId: string): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(apiRequests)
+      .where(and(
+        eq(apiRequests.userId, userId),
+        inArray(apiRequests.status, ['pending', 'processing'])
+      ));
+    return result[0]?.count || 0;
+  }
+
+  // API Request Response operations
+  async getApiRequestResponses(requestId: string): Promise<ApiRequestResponse[]> {
+    return await db
+      .select()
+      .from(apiRequestResponses)
+      .where(eq(apiRequestResponses.requestId, requestId))
+      .orderBy(apiRequestResponses.createdAt);
+  }
+
+  async createApiRequestResponse(response: InsertApiRequestResponse): Promise<ApiRequestResponse> {
+    const [created] = await db
+      .insert(apiRequestResponses)
+      .values(response)
+      .returning();
+    return created;
+  }
+
+  async updateApiRequestResponse(id: string, updates: Partial<ApiRequestResponse>): Promise<ApiRequestResponse> {
+    const [updated] = await db
+      .update(apiRequestResponses)
+      .set(updates)
+      .where(eq(apiRequestResponses.id, id))
+      .returning();
+    return updated;
+  }
+
+  // User call config operations (for API)
+  async getUserCallConfig(id: string): Promise<UserCallConfig | undefined> {
+    const [config] = await db
+      .select()
+      .from(userCallConfigs)
+      .where(eq(userCallConfigs.id, id));
+    return config;
+  }
+
+  async getUserCallConfigsByIds(userId: string, ids: string[]): Promise<UserCallConfig[]> {
+    if (ids.length === 0) return [];
+    
+    return await db
+      .select()
+      .from(userCallConfigs)
+      .where(and(
+        eq(userCallConfigs.userId, userId),
+        inArray(userCallConfigs.id, ids)
+      ));
   }
 }
 
