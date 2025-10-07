@@ -8,7 +8,8 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Settings, Send, Loader2, Download } from "lucide-react";
+import { Sparkles, Plus, Settings, Send, Loader2, Download, Key } from "lucide-react";
+import { Link } from "wouter";
 import { ConversationList } from "@/components/ConversationList";
 import { ResponseCard } from "@/components/ResponseCard";
 import { ControlPanel } from "@/components/ControlPanel";
@@ -241,8 +242,8 @@ export default function Home() {
               />
             </ScrollArea>
           </SidebarContent>
-          {user?.isGuest && (
-            <SidebarFooter className="border-t border-sidebar-border p-4">
+          <SidebarFooter className="border-t border-sidebar-border p-4">
+            {user?.isGuest ? (
               <button
                 onClick={() => window.location.href = '/api/login'}
                 className="w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
@@ -250,8 +251,18 @@ export default function Home() {
               >
                 Sign in to save your conversations
               </button>
-            </SidebarFooter>
-          )}
+            ) : (
+              <Link href="/api-keys">
+                <a
+                  className="flex items-center gap-2 w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
+                  data-testid="link-api-keys"
+                >
+                  <Key className="w-4 h-4" />
+                  <span>API Keys</span>
+                </a>
+              </Link>
+            )}
+          </SidebarFooter>
         </Sidebar>
 
         {/* Main Content */}
