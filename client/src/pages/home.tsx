@@ -252,14 +252,13 @@ export default function Home() {
                 Sign in to save your conversations
               </button>
             ) : (
-              <Link href="/api-keys">
-                <a
-                  className="flex items-center gap-2 w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
-                  data-testid="link-api-keys"
-                >
-                  <Key className="w-4 h-4" />
-                  <span>API Keys</span>
-                </a>
+              <Link 
+                href="/api-keys"
+                className="flex items-center gap-2 w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
+                data-testid="link-api-keys"
+              >
+                <Key className="w-4 h-4" />
+                <span>API Keys</span>
               </Link>
             )}
           </SidebarFooter>

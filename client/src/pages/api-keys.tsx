@@ -113,12 +113,12 @@ export default function ApiKeys() {
     <div className="flex flex-col h-screen">
       <header className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
-          <Link href="/">
-            <a data-testid="link-back-home">
-              <Button variant="ghost" size="icon">
-                <ArrowLeft className="w-5 h-5" />
-              </Button>
-            </a>
+          <Link 
+            href="/"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover-elevate active-elevate-2 transition-colors"
+            data-testid="link-back-home"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </Link>
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-primary" />
