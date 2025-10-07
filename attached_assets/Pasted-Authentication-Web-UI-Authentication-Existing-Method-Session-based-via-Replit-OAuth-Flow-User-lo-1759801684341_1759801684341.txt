@@ -1,0 +1,398 @@
+Authentication
+Web UI Authentication (Existing)
+Method: Session-based via Replit OAuth
+Flow: User logs in → session cookie created → cookie sent with requests
+Middleware: isAuthenticated checks session validity
+Routes: All /api/* routes (non-versioned)
+Public API Authentication (New)
+Method: API key-based (Bearer token)
+Key Format: clv_live_<32-character-random-string> (production) or clv_test_<32-character-random-string> (testing)
+Header: Authorization: Bearer clv_live_abc123...
+Middleware: authenticateApiKey validates key and extracts userId
+Routes: All /api/v1/* routes
+API Key Management (New Web UI Features)
+Users can manage API keys through the web interface:
+View keys: List all keys with name
+Create key: Generate new key with custom name
+Revoke key: Soft delete (mark as revoked, don't physically delete)
+
+Data Models
+New Tables
+apiKeys
+id (UUID, primary key)
+userId (foreign key → users.id)
+name (string) - User-defined label like "Production", "Testing"
+keyHash (string) - Bcrypt hash of the actual key
+keyPrefix (string) - First 8 characters for display (e.g., "clv_live")
+lastUsedAt (timestamp, nullable)
+createdAt (timestamp)
+revokedAt (timestamp, nullable)
+apiRequests
+id (UUID, primary key)
+userId (foreign key → users.id)
+apiKeyId (foreign key → apiKeys.id)
+input (text) - The screening input text
+configIds (array of UUIDs) - Which UserCallConfigs to use
+status (enum: 'pending', 'processing', 'completed', 'failed')
+metadata (JSONB, nullable) - User-defined key-value data
+webhookUrl (string, nullable) - URL to POST when completed
+createdAt (timestamp)
+completedAt (timestamp, nullable)
+apiRequestResponses
+id (UUID, primary key)
+requestId (foreign key → apiRequests.id)
+callConfigId (foreign key → userCallConfigs.id)
+displayName (string) - From config
+model (string) - AI model used
+content (text) - AI response content
+status (enum: 'streaming', 'completed', 'error')
+responseId (string, nullable) - OpenAI response ID
+inputTokens (integer, nullable)
+outputTokens (integer, nullable)
+totalTokens (integer, nullable)
+duration (integer, nullable) - Milliseconds
+toolCalls (JSONB, nullable)
+annotations (JSONB, nullable)
+error (text, nullable)
+createdAt (timestamp)
+completedAt (timestamp, nullable)
+
+Public API Endpoints
+Configuration Management
+POST /api/v1/configurations
+Create a new AI configuration.
+Request Body:
+{
+  "displayName": "string (required, 1-100 chars)",
+  "model": "enum (required: gpt-5, gpt-4, o3, gpt-4o-mini)",
+  "systemPrompt": "string (optional, max 10000 chars)",
+  "reasoningEffort": "enum (optional: low, medium, high, null)",
+  "webSearchEnabled": "boolean (required)",
+  "topP": "number (optional, 0.0-1.0, null)",
+  "responseMode": "enum (required: markdown, json-field)",
+  "enabled": "boolean (required)"
+}
+
+Response (201 Created):
+{
+  "id": "uuid",
+  "displayName": "string",
+  "model": "string",
+  "systemPrompt": "string | null",
+  "reasoningEffort": "string | null",
+  "webSearchEnabled": "boolean",
+  "topP": "number | null",
+  "responseMode": "string",
+  "enabled": "boolean",
+  "order": "integer",
+  "isDefault": "boolean",
+  "createdAt": "ISO8601 timestamp"
+}
+
+Validation:
+displayName must be unique per user
+model must be valid enum value
+topP if provided must be between 0 and 1
+reasoningEffort
+Errors:
+400: Invalid request body or validation failed
+401: Invalid or missing API key
+409: Configuration with this name already exists
+429: Rate limit exceeded
+
+GET /api/v1/configurations
+List all configurations for the authenticated user.
+Query Parameters:
+enabled (optional boolean) - Filter by enabled status
+limit (optional integer, default 50, max 100)
+offset (optional integer, default 0)
+Response (200 OK):
+{
+  "configurations": [
+    {
+      "id": "uuid",
+      "displayName": "string",
+      "model": "string",
+      "systemPrompt": "string | null",
+      "reasoningEffort": "string | null",
+      "webSearchEnabled": "boolean",
+      "topP": "number | null",
+      "responseMode": "string",
+      "enabled": "boolean",
+      "order": "integer",
+      "isDefault": "boolean",
+      "createdAt": "ISO8601",
+      "updatedAt": "ISO8601"
+    }
+  ],
+  "total": "integer",
+  "limit": "integer",
+  "offset": "integer"
+}
+
+
+GET /api/v1/configurations/{configId}
+Get a single configuration.
+Response (200 OK): Same as single config object above
+Errors:
+401: Invalid API key
+404: Configuration not found or doesn't belong to user
+
+PATCH /api/v1/configurations/{configId}
+Update an existing configuration.
+Request Body: Same fields as POST, all optional except must provide at least one field
+Response (200 OK): Updated configuration object
+Validation:
+Cannot modify isDefault for default configurations
+Same validation rules as POST for provided fields
+Errors:
+400: Invalid update data
+401: Invalid API key
+403: Cannot modify default configuration's core settings
+404: Configuration not found
+
+DELETE /api/v1/configurations/{configId}
+Delete a configuration.
+Response (204 No Content)
+Behavior:
+Cannot delete if isDefault: true
+Soft delete if any apiRequests reference it (mark as deleted but keep record)
+Hard delete if never used
+Errors:
+401: Invalid API key
+403: Cannot delete default configuration
+404: Configuration not found
+
+Request Submission
+POST /api/v1/requests
+Submit a new screening request.
+Request Body:
+{
+  "input": "string (required, 1-50000 chars)",
+  "configIds": "array of UUIDs (required, 1-10 items)",
+  "metadata": "object (optional, arbitrary key-value pairs)"
+}
+
+Response (202 Accepted):
+{
+  "id": "uuid",
+  "status": "processing",
+  "input": "string",
+  "configIds": ["uuid"],
+  "metadata": "object | null",
+  "responses": [
+    {
+      "id": "uuid",
+      "displayName": "string",
+      "model": "string",
+      "status": "streaming",
+      "content": "",
+      "createdAt": "ISO8601"
+    }
+  ],
+  "createdAt": "ISO8601"
+}
+
+Behavior:
+Validate all configIds belong to user and are enabled
+Create apiRequest record with status='processing'
+Create placeholder apiRequestResponses for each config (status='streaming')
+Trigger asynchronous AI processing using shared streamOpenAIResponse function
+Return immediately (don't wait for AI completion)
+As responses stream in, update apiRequestResponses records
+When all responses complete, update apiRequest.status='completed' and completedAt
+Validation:
+input cannot be empty or exceed 50K characters
+configIds must contain 1-10 valid UUIDs
+All configs must exist and belong to user
+User cannot have more than 100 pending/processing requests
+Errors:
+400: Invalid request body
+401: Invalid API key
+403: One or more configs not found or not enabled
+429: Too many concurrent requests or rate limit exceeded
+
+GET /api/v1/requests/{requestId}
+Get request status and responses.
+Response (200 OK):
+{
+  "id": "uuid",
+  "status": "completed",
+  "input": "string",
+  "configIds": ["uuid"],
+  "metadata": "object | null",
+  "responses": [
+    {
+      "id": "uuid",
+      "displayName": "string",
+      "model": "string",
+      "status": "completed",
+      "content": "string",
+      "responseId": "string | null",
+      "inputTokens": "integer | null",
+      "outputTokens": "integer | null",
+      "totalTokens": "integer | null",
+      "duration": "integer | null",
+      "toolCalls": "array | null",
+      "annotations": "array | null",
+      "error": "string | null",
+      "createdAt": "ISO8601",
+      "completedAt": "ISO8601 | null"
+    }
+  ],
+  "createdAt": "ISO8601",
+  "completedAt": "ISO8601 | null"
+}
+
+Behavior:
+Returns current state (may be streaming, partial responses)
+Poll this endpoint to check progress
+When status='completed', all responses are final
+Errors:
+401: Invalid API key
+404: Request not found or doesn't belong to user
+
+GET /api/v1/requests
+List all requests for the authenticated user.
+Query Parameters:
+status (optional enum) - Filter by status
+limit (optional integer, default 50, max 100)
+offset (optional integer, default 0)
+startDate (optional ISO8601) - Filter requests created after this date
+endDate (optional ISO8601) - Filter requests created before this date
+Response (200 OK):
+{
+  "requests": [
+    {
+      "id": "uuid",
+      "status": "string",
+      "input": "string (first 200 chars only)",
+      "metadata": "object | null",
+      "createdAt": "ISO8601",
+      "completedAt": "ISO8601 | null"
+    }
+  ],
+  "total": "integer",
+  "limit": "integer",
+  "offset": "integer"
+}
+
+Behavior:
+Returns summary view (full responses not included, use GET single request for those)
+Ordered by createdAt descending (newest first)
+
+Rate Limiting
+API Key Rate Limits
+Sustained limit: 10 requests per minute per API key
+Configuration operations: 10 per minute per API key
+Request submission: 5 concurrent processing requests per API key
+Response Headers
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 87
+X-RateLimit-Reset: 1640000000 (Unix timestamp)
+
+When Exceeded
+Return 429 Too Many Requests
+Include Retry-After header with seconds to wait
+Body: {"error": "Rate limit exceeded", "retryAfter": 42}
+
+Error Response Format
+All errors follow consistent format:
+{
+  "error": {
+    "code": "invalid_request",
+    "message": "Human-readable error description",
+    "details": {
+      "field": "configIds",
+      "reason": "Config abc123 not found"
+    }
+  }
+}
+
+Error Codes
+invalid_request - Malformed request body or invalid parameters
+authentication_failed - Invalid or missing API key
+permission_denied - User doesn't own the resource
+resource_not_found - Requested resource doesn't exist
+rate_limit_exceeded - Too many requests
+validation_error - Request failed validation rules
+conflict - Resource conflict (e.g., duplicate name)
+server_error - Unexpected server error
+
+Web UI Additions
+API Keys Management Page
+New page at /settings/api-keys:
+Display:
+Table of API keys showing: name, prefix (e.g., clv_live_abc12345...), created date, last used date, status
+Each row has "Revoke" button (except revoked ones)
+Create New Key:
+Button "Create New API Key"
+Modal prompts for key name
+After creation, show full key ONCE in a copy-to-clipboard dialog with warning: "Save this now, you won't see it again"
+After closing dialog, only show prefix
+Revoke Key:
+Confirmation dialog
+Mark as revoked (don't delete from database)
+Revoked keys shown grayed out with "Revoked on {date}"
+Security:
+Keys are hashed with bcrypt before storage (like passwords)
+Full key only shown once at creation
+Prefixes stored in plain text for display
+
+Business Logic Reuse
+Shared Between UI and API
+Both routes use identical:
+AI orchestration: streamOpenAIResponse function from openai.ts
+Configuration validation: Same rules for model/prompt validation
+Token tracking: Same usage calculation
+Tool calling: Same MCP tools integration
+Web search: Same search integration
+Differences
+Aspect
+Web UI
+Public API
+Auth
+Session cookie
+API key bearer token
+Data model
+Conversation → Message → Response
+Request → Response
+Title inference
+Auto-infer from first message
+No titles
+Config selection
+User enables in UI, all enabled run
+Client specifies via configIds
+Response
+Return immediately, poll for updates
+Return immediately, poll for updates
+Metadata
+None
+User-defined JSON object
+Webhooks
+None
+Optional notification URL
+
+
+Database Migrations
+Required Migrations
+Create apiKeys table with indices on userId, keyHash
+Create apiRequests table with indices on userId, status, createdAt
+Create apiRequestResponses table with indices on requestId, status
+Indices Needed
+apiKeys.userId - for listing user's keys
+apiKeys.keyHash - for authentication lookup
+apiRequests.userId, status, createdAt - for listing/filtering
+apiRequestResponses.requestId - for fetching request responses
+
+Documentation Requirements
+OpenAPI Specification
+Generate OpenAPI 3.0 spec documenting:
+All endpoints with request/response schemas
+Authentication requirements
+Error responses
+Rate limits
+Interactive API Documentation
+Swagger UI or Redoc at /api/v1/docs
+Allow users to test endpoints with their API key
+Show example requests/responses
