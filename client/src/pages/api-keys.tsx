@@ -9,8 +9,9 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
-import { Key, Plus, Copy, Trash2, AlertTriangle } from "lucide-react";
+import { Key, Plus, Copy, Trash2, AlertTriangle, ArrowLeft, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { Link } from "wouter";
 
 interface ApiKey {
   id: string;
@@ -109,7 +110,29 @@ export default function ApiKeys() {
   const revokedKeys = apiKeys.filter(key => key.revokedAt);
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-screen">
+      <header className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex items-center gap-3">
+          <Link href="/">
+            <a data-testid="link-back-home">
+              <Button variant="ghost" size="icon">
+                <ArrowLeft className="w-5 h-5" />
+              </Button>
+            </a>
+          </Link>
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <h1 className="text-lg font-semibold">Cliver</h1>
+          </div>
+        </div>
+        <Button
+          variant="ghost"
+          onClick={() => window.location.href = user?.isGuest ? '/api/login' : '/api/logout'}
+          data-testid={user?.isGuest ? "button-signin" : "button-logout"}
+        >
+          {user?.isGuest ? "Sign In" : "Log Out"}
+        </Button>
+      </header>
       <div className="p-6 border-b">
         <div className="flex items-center justify-between gap-4">
           <div>
