@@ -63,6 +63,7 @@ export interface IStorage {
   // API Key operations
   getApiKeys(userId: string): Promise<ApiKey[]>;
   getApiKeyByHash(keyHash: string): Promise<ApiKey | undefined>;
+  getApiKeysByPrefix(keyPrefix: string): Promise<ApiKey[]>;
   createApiKey(key: InsertApiKey): Promise<ApiKey>;
   revokeApiKey(id: string): Promise<void>;
   updateApiKeyLastUsed(id: string): Promise<void>;
@@ -337,6 +338,13 @@ export class DatabaseStorage implements IStorage {
     return key;
   }
 
+  async getApiKeysByPrefix(keyPrefix: string): Promise<ApiKey[]> {
+    return await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.keyPrefix, keyPrefix));
+  }
+
   async createApiKey(key: InsertApiKey): Promise<ApiKey> {
     const [created] = await db
       .insert(apiKeys)
@@ -366,9 +374,9 @@ export class DatabaseStorage implements IStorage {
   ): Promise<{ requests: ApiRequest[]; total: number }> {
     const { status, limit = 50, offset = 0, startDate, endDate } = options || {};
     
-    const conditions = [eq(apiRequests.userId, userId)];
+    const conditions: any[] = [eq(apiRequests.userId, userId)];
     if (status) {
-      conditions.push(eq(apiRequests.status, status));
+      conditions.push(eq(apiRequests.status, status as any));
     }
     if (startDate) {
       conditions.push(gte(apiRequests.createdAt, startDate));
