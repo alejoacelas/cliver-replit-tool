@@ -59,7 +59,7 @@ export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: Co
       id: crypto.randomUUID(),
       userId: userId,
       displayName: 'New Configuration',
-      model: 'gpt-5',
+      model: 'claude-sonnet-4-20250514',
       systemPrompt: null,
       reasoningEffort: null,
       webSearchEnabled: true,
@@ -149,6 +149,7 @@ export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: Co
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
+                              <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
                               <SelectItem value="gpt-5">GPT-5</SelectItem>
                               <SelectItem value="gpt-4">GPT-4</SelectItem>
                               <SelectItem value="o3">O3</SelectItem>
