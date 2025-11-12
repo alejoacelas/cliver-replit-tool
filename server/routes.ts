@@ -7,6 +7,7 @@ import type { UserCallConfig } from "@shared/schema";
 import * as XLSX from "xlsx";
 import { DEFAULT_CONFIG } from "./prompt";
 import { registerApiV1Routes } from "./apiV1Routes";
+import { registerChatRoute } from "./chatRoute";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
 
@@ -431,6 +432,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register API v1 routes
   registerApiV1Routes(app);
+
+  // Register chat route using AI SDK
+  registerChatRoute(app);
 
   const httpServer = createServer(app);
   return httpServer;

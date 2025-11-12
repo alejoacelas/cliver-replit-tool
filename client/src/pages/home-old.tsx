@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -6,47 +6,25 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Plus, Settings, Download, Key, Copy, RefreshCcw } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Sparkles, Plus, Settings, Send, Loader2, Download, Key } from "lucide-react";
 import { Link } from "wouter";
 import { ConversationList } from "@/components/ConversationList";
+import { ResponseCard } from "@/components/ResponseCard";
 import { ControlPanel } from "@/components/ControlPanel";
 import { ExportDialog } from "@/components/ExportDialog";
-import type { Conversation, UserCallConfig } from "@shared/schema";
-import { useChat } from "@ai-sdk/react";
-import {
-  Conversation as ConversationUI,
-  ConversationContent,
-  ConversationScrollButton,
-} from "@/components/ai-elements/conversation";
-import { Message, MessageContent } from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputBody,
-  PromptInputTextarea,
-  PromptInputFooter,
-  PromptInputTools,
-  PromptInputSubmit,
-  PromptInputButton,
-  PromptInputActionMenu,
-  PromptInputActionMenuTrigger,
-  PromptInputActionMenuContent,
-  PromptInputActionAddAttachments,
-  PromptInputAttachments,
-  PromptInputAttachment,
-  type PromptInputMessage,
-} from "@/components/ai-elements/prompt-input";
-import { Action, Actions } from "@/components/ai-elements/actions";
-import { Response } from "@/components/ai-elements/response";
-import { Loader } from "@/components/ai-elements/loader";
+import type { Conversation, Message, MessageResponse, UserCallConfig } from "@shared/schema";
 
 export default function Home() {
   const { user, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
+  const [input, setInput] = useState("");
   const [controlPanelOpen, setControlPanelOpen] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [webSearch, setWebSearch] = useState(true);
-  const [selectedModel, setSelectedModel] = useState("gpt-4o");
+  const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -69,30 +47,27 @@ export default function Home() {
     retry: false,
   });
 
+  // Fetch active conversation messages with polling for streaming responses
+  const { data: messages = [] } = useQuery<(Message & { responses: MessageResponse[] })[]>({
+    queryKey: ["/api/conversations", activeConversationId, "messages"],
+    enabled: !!activeConversationId,
+    retry: false,
+    refetchInterval: (query) => {
+      // Poll every 1 second if there are streaming responses
+      const data = query.state.data;
+      const hasStreamingResponses = data?.some(msg => 
+        msg.responses?.some(r => r.status === "streaming")
+      );
+      return hasStreamingResponses ? 1000 : false;
+    },
+  });
+
   // Fetch user call configs
   const { data: callConfigs = [] } = useQuery<UserCallConfig[]>({
     queryKey: ["/api/call-configs"],
     enabled: !!user,
     retry: false,
   });
-
-  // Use AI SDK's useChat hook
-  const chat = useChat({
-    onFinish: (message) => {
-      console.log('[Home] Message finished:', message);
-      // Optionally save to database here
-    },
-    onError: (error) => {
-      console.error('[Home] Chat error:', error);
-      toast({
-        title: "Error",
-        description: error.message || "Failed to send message",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const { messages, isLoading, reload, sendMessage } = chat;
 
   // Create conversation mutation
   const createConversationMutation = useMutation({
@@ -102,6 +77,8 @@ export default function Home() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      // Clear previous conversation's messages from cache
+      queryClient.removeQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
       setActiveConversationId(data.id);
     },
     onError: (error: Error) => {
@@ -119,6 +96,42 @@ export default function Home() {
       toast({
         title: "Error",
         description: "Failed to create conversation",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Send message mutation
+  const sendMessageMutation = useMutation({
+    mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
+      const res = await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { content });
+      return await res.json() as { message: Message };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
+      // Invalidate conversations immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      // Invalidate again after 2 seconds to pick up title inference (happens in background)
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
+      }, 2000);
+      setInput("");
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Unauthorized",
+          description: "You are logged out. Logging in again...",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      toast({
+        title: "Error",
+        description: "Failed to send message",
         variant: "destructive",
       });
     },
@@ -160,19 +173,26 @@ export default function Home() {
     createConversationMutation.mutate("New Conversation");
   };
 
-  const handleSubmit = (message: PromptInputMessage) => {
-    const hasText = Boolean(message.text);
-    const hasAttachments = Boolean(message.files?.length);
-
-    if (!(hasText || hasAttachments)) {
-      return;
-    }
-
-    // For now, just send the text. File handling can be added later
-    sendMessage({
-      text: message.text || "Sent with attachments",
+  const handleSendMessage = async () => {
+    if (!input.trim() || !activeConversationId) return;
+    
+    sendMessageMutation.mutate({
+      conversationId: activeConversationId,
+      content: input,
     });
   };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  // Auto scroll to bottom when new messages arrive
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
 
   // Select first conversation if none selected
   useEffect(() => {
@@ -188,7 +208,7 @@ export default function Home() {
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <Loader size="lg" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -213,12 +233,14 @@ export default function Home() {
             </SidebarMenu>
           </SidebarHeader>
           <SidebarContent>
-            <ConversationList
-              conversations={conversations}
-              activeConversationId={activeConversationId}
-              onSelectConversation={setActiveConversationId}
-              isLoading={conversationsLoading}
-            />
+            <ScrollArea className="flex-1">
+              <ConversationList
+                conversations={conversations}
+                activeConversationId={activeConversationId}
+                onSelectConversation={setActiveConversationId}
+                isLoading={conversationsLoading}
+              />
+            </ScrollArea>
           </SidebarContent>
           <SidebarFooter className="border-t border-sidebar-border p-4">
             {user?.isGuest ? (
@@ -230,7 +252,7 @@ export default function Home() {
                 Sign in to save your conversations
               </button>
             ) : (
-              <Link
+              <Link 
                 href="/api-keys"
                 className="flex items-center gap-2 w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
                 data-testid="link-api-keys"
@@ -280,92 +302,76 @@ export default function Home() {
             </div>
           </header>
 
-          {/* Chat Area */}
-          {!activeConversationId ? (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-20 px-4">
-              <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
-              <h2 className="text-2xl font-semibold mb-2">Welcome to Cliver</h2>
-              <p className="text-muted-foreground mb-6 max-w-md">
-                Start a new conversation to begin AI-powered customer background research
-              </p>
-              <Button onClick={handleNewChat} data-testid="button-start-chat">
-                <Plus className="w-4 h-4 mr-2" />
-                New Chat
-              </Button>
-            </div>
-          ) : (
-            <div className="flex-1 flex flex-col">
-              <ConversationUI className="flex-1">
-                <ConversationContent>
-                  {messages.map((message) => {
-                    const isLastMessage = message.id === messages.at(-1)?.id;
-                    const isAssistant = message.role === "assistant";
-                    const messageRole = (message.role === "user" || message.role === "assistant") ? message.role : "assistant";
-                    const messageText = typeof message.text === 'string' ? message.text :
-                                      Array.isArray(message.parts) ? message.parts.map(p => typeof p === 'string' ? p : p.text || '').join('') : '';
-
-                    return (
-                      <Fragment key={message.id}>
-                        <Message from={messageRole}>
-                          <MessageContent>
-                            {isAssistant ? (
-                              <Response>{messageText}</Response>
-                            ) : (
-                              <div className="text-sm">{messageText}</div>
-                            )}
-                          </MessageContent>
-                        </Message>
-
-                        {isAssistant && isLastMessage && (
-                          <Actions className="mt-2">
-                            <Action onClick={() => reload()} label="Retry">
-                              <RefreshCcw className="w-3 h-3" />
-                            </Action>
-                            <Action
-                              onClick={() => navigator.clipboard.writeText(messageText)}
-                              label="Copy"
-                            >
-                              <Copy className="w-3 h-3" />
-                            </Action>
-                          </Actions>
-                        )}
-                      </Fragment>
-                    );
-                  })}
-                  {isLoading && <Loader />}
-                </ConversationContent>
-                <ConversationScrollButton />
-              </ConversationUI>
-
-              {/* Input Area */}
-              <div className="border-t p-4">
-                <div>
-                  <PromptInput onSubmit={handleSubmit} status={isLoading ? "streaming" : "ready"} multiple>
-                    <PromptInputBody>
-                      <PromptInputAttachments>
-                        {(attachment) => <PromptInputAttachment data={attachment} />}
-                      </PromptInputAttachments>
-                      <PromptInputTextarea />
-                    </PromptInputBody>
-                    <PromptInputFooter>
-                      <PromptInputTools>
-                        <PromptInputActionMenu>
-                          <PromptInputActionMenuTrigger />
-                          <PromptInputActionMenuContent>
-                            <PromptInputActionAddAttachments />
-                          </PromptInputActionMenuContent>
-                        </PromptInputActionMenu>
-                        <PromptInputButton
-                          variant={webSearch ? 'default' : 'ghost'}
-                          onClick={() => setWebSearch(!webSearch)}
-                        >
-                          <span className="text-xs">🔍 Search</span>
-                        </PromptInputButton>
-                      </PromptInputTools>
-                      <PromptInputSubmit status={isLoading ? "streaming" : "ready"} />
-                    </PromptInputFooter>
-                  </PromptInput>
+          {/* Messages Area */}
+          <ScrollArea className="flex-1">
+            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+              {!activeConversationId ? (
+                <div className="flex flex-col items-center justify-center h-full text-center py-20">
+                  <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
+                  <h2 className="text-2xl font-semibold mb-2">Welcome to Cliver</h2>
+                  <p className="text-muted-foreground mb-6 max-w-md">
+                    Start a new conversation to begin AI-powered customer background research
+                  </p>
+                  <Button onClick={handleNewChat} data-testid="button-start-chat">
+                    <Plus className="w-4 h-4 mr-2" />
+                    New Chat
+                  </Button>
                 </div>
+              ) : (
+                <div className="space-y-6">
+                  {messages.map((message) => (
+                    <div key={message.id} className="space-y-4">
+                      {/* User Message */}
+                      <div className="flex justify-end">
+                        <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 max-w-2xl" data-testid={`message-user-${message.id}`}>
+                          {message.content}
+                        </div>
+                      </div>
+
+                      {/* AI Responses */}
+                      <div className="space-y-4">
+                        {message.responses?.map((response) => (
+                          <ResponseCard
+                            key={response.id}
+                            response={response}
+                            streamingText={streamingResponses.get(response.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Input Area */}
+          {activeConversationId && (
+            <div className="border-t border-border p-6 bg-background">
+              <div className="max-w-5xl mx-auto relative">
+                <Textarea
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Paste customer information to research..."
+                  className="pr-12 resize-none min-h-[60px]"
+                  disabled={sendMessageMutation.isPending}
+                  data-testid="input-message"
+                />
+                <Button
+                  onClick={handleSendMessage}
+                  disabled={!input.trim() || sendMessageMutation.isPending}
+                  size="icon"
+                  className="absolute right-2 bottom-2 rounded-full"
+                  data-testid="button-send"
+                >
+                  {sendMessageMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
+                </Button>
               </div>
             </div>
           )}
