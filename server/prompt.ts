@@ -71,7 +71,7 @@ Remember:
 
 export const DEFAULT_CONFIG = {
   displayName: "Default Analysis",
-  model: "gpt-5",
+  model: "claude-sonnet-4-20250514",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   reasoningEffort: "medium" as const,
   webSearchEnabled: true,
