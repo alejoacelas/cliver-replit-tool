@@ -1,0 +1,12 @@
+{
+  "name": "claude-connection-test",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test:customer": "node --loader tsx test-customer-info.ts",
+    "test:stream": "node --loader tsx test-stream.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.34.0"
+  }
+}
