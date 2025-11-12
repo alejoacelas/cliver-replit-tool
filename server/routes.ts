@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { streamOpenAIResponse, inferCustomerInfo } from "./openai";
+import { streamAnthropicResponse } from "./anthropic";
 import type { UserCallConfig } from "@shared/schema";
 import * as XLSX from "xlsx";
 import { DEFAULT_CONFIG } from "./prompt";
@@ -436,6 +437,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   return httpServer;
 }
 
+// Helper function to determine if a model is an Anthropic/Claude model
+function isAnthropicModel(model: string): boolean {
+  return model.toLowerCase().includes('claude');
+}
+
 // Helper function to trigger streaming responses
 async function triggerStreamingResponses(
   messageId: string,
@@ -452,15 +458,28 @@ async function triggerStreamingResponses(
       let accumulatedText = "";
       let completeData: any = null;
 
-      for await (const event of streamOpenAIResponse({
-        model: config.model,
-        input: userInput,
-        instructions: config.systemPrompt || undefined,
-        reasoningEffort: config.reasoningEffort,
-        webSearchEnabled: config.webSearchEnabled,
-        topP: config.topP,
-        responseMode: config.responseMode,
-      })) {
+      // Choose the appropriate streaming function based on the model
+      const isAnthropic = isAnthropicModel(config.model);
+      const streamGenerator = isAnthropic 
+        ? streamAnthropicResponse({
+            model: config.model,
+            input: userInput,
+            instructions: config.systemPrompt || undefined,
+            webSearchEnabled: config.webSearchEnabled,
+            topP: config.topP,
+            responseMode: config.responseMode,
+          })
+        : streamOpenAIResponse({
+            model: config.model,
+            input: userInput,
+            instructions: config.systemPrompt || undefined,
+            reasoningEffort: config.reasoningEffort,
+            webSearchEnabled: config.webSearchEnabled,
+            topP: config.topP,
+            responseMode: config.responseMode,
+          });
+
+      for await (const event of streamGenerator) {
         if (event.type === 'delta') {
           accumulatedText += event.content;
           
