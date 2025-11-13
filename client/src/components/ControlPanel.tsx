@@ -160,7 +160,7 @@ export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: Co
                             value={config.systemPrompt || ''}
                             onChange={(e) => updateConfig(config.id, { systemPrompt: e.target.value || null })}
                             placeholder="Custom instructions for this model..."
-                            className="mt-1 min-h-[80px]"
+                            className="mt-1 min-h-[200px]"
                             data-testid={`config-prompt-input-${config.id}`}
                           />
                         </div>

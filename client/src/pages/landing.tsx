@@ -80,9 +80,6 @@ export default function Landing() {
             >
               Get Started
             </Button>
-            <p className="text-sm text-muted-foreground mt-4">
-              Try it now, no sign-in required
-            </p>
           </div>
         </div>
       </main>

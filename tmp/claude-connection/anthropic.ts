@@ -92,12 +92,21 @@ const HARDCODED_MCP_TOOLS: MCPTool[] = [
 
 // Build MCP servers array for Anthropic API (MCP connector format)
 function buildMCPServers(mcpTools: MCPTool[]) {
+  // Allowed tools list - only these tools will be available from the MCP server
+  const allowedTools = [
+    "search_nih_grants_by_pi_name",
+    "get_orcid_profile",
+    "calculate_distance",
+    "search_screening_list"
+  ];
+
   return mcpTools.map(mcpTool => ({
     type: "url",
     url: mcpTool.server_url,
     name: mcpTool.server_label,
     tool_configuration: {
-      enabled: true
+      enabled: true,
+      allowed_tools: allowedTools
     }
   }));
 }
