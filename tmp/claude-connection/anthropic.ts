@@ -253,29 +253,40 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
     responseMode,
   } = params;
 
-  // Build system prompt
-  let systemPrompt = instructions || "";
+  // Build guidance message with instructions wrapped in <guidance> tags
+  let guidanceContent = "";
+  if (instructions) {
+    guidanceContent = instructions;
+  }
   if (responseMode === 'json-field') {
-    systemPrompt += "\n\nYou must respond with a JSON object containing a 'final_response' field with your answer.";
+    if (guidanceContent) {
+      guidanceContent += "\n\nYou must respond with a JSON object containing a 'final_response' field with your answer.";
+    } else {
+      guidanceContent = "You must respond with a JSON object containing a 'final_response' field with your answer.";
+    }
   }
 
   // Build request parameters
   const requestParams: any = {
     model,
     max_tokens: 4096,
-    messages: [
-      {
-        role: "user",
-        content: input
-      }
-    ],
+    messages: [],
     stream: true,
   };
 
-  // Add system prompt if specified
-  if (systemPrompt) {
-    requestParams.system = systemPrompt;
+  // Add guidance message as first message if instructions are provided
+  if (guidanceContent) {
+    requestParams.messages.push({
+      role: "user",
+      content: `<guidance>${guidanceContent}</guidance>`
+    });
   }
+
+  // Add the actual user input as the next message
+  requestParams.messages.push({
+    role: "user",
+    content: input
+  });
 
   // Add top_p if specified
   if (topP !== null && topP !== undefined) {

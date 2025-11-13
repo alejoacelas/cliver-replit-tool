@@ -217,8 +217,8 @@ function getThinkingTokens(reasoningEffort?: 'low' | 'medium' | 'high' | null): 
 
   const mapping = {
     low: 5000,
-    medium: 5000,
-    high: 20000
+    medium: 20000,
+    high: 50000
   };
 
   return mapping[reasoningEffort];
@@ -236,10 +236,17 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
     responseMode,
   } = params;
 
-  // Build system prompt
-  let systemPrompt = instructions || "";
+  // Build guidance message with instructions wrapped in <guidance> tags
+  let guidanceContent = "";
+  if (instructions) {
+    guidanceContent = instructions;
+  }
   if (responseMode === 'json-field') {
-    systemPrompt += "\n\nYou must respond with a JSON object containing a 'final_response' field with your answer.";
+    if (guidanceContent) {
+      guidanceContent += "\n\nYou must respond with a JSON object containing a 'final_response' field with your answer.";
+    } else {
+      guidanceContent = "You must respond with a JSON object containing a 'final_response' field with your answer.";
+    }
   }
 
   // Calculate thinking tokens
@@ -247,20 +254,29 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
 
   // Calculate max_tokens (ensure it's high enough to accommodate thinking + output)
   // Using 16384 as base to ensure plenty of room for both thinking and output
-  const maxTokens = thinkingTokens > 0 ? Math.max(16384, thinkingTokens + 8192) : 16384;
+  const maxTokens = 60000;
 
   // Build request parameters
   const requestParams: any = {
     model,
     max_tokens: maxTokens,
-    messages: [
-      {
-        role: "user",
-        content: input
-      }
-    ],
+    messages: [],
     stream: true,
   };
+
+  // Add guidance message as first message if instructions are provided
+  if (guidanceContent) {
+    requestParams.messages.push({
+      role: "user",
+      content: `<guidance>${guidanceContent}</guidance>`
+    });
+  }
+
+  // Add the actual user input as the next message
+  requestParams.messages.push({
+    role: "user",
+    content: input
+  });
 
   // Add thinking budget if reasoning effort is specified
   if (thinkingTokens > 0) {
@@ -268,11 +284,6 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
       type: "enabled",
       budget_tokens: thinkingTokens
     };
-  }
-
-  // Add system prompt if specified
-  if (systemPrompt) {
-    requestParams.system = systemPrompt;
   }
 
   // Add top_p if specified
