@@ -166,14 +166,19 @@ function extractResponseData(response: any): SimplifiedResponse {
       else if (block.type === 'mcp_tool_use') {
         toolCalls.push({
           name: block.name || 'mcp_tool',
-          arguments: block.input || {},
+          arguments: {
+            ...block.input,
+            // Store the tool_use_id so we can match it with the result
+            _tool_use_id: block.id,
+            server_name: block.server_name
+          },
           output: null
         });
       }
       // Handle MCP tool result blocks (these come after tool use)
       else if (block.type === 'mcp_tool_result') {
-        // Find the corresponding tool call and update its output
-        const toolCall = toolCalls.find(tc => tc.arguments.tool_use_id === block.tool_use_id);
+        // Find the corresponding tool call by matching tool_use_id with _tool_use_id
+        const toolCall = toolCalls.find(tc => tc.arguments._tool_use_id === block.tool_use_id);
         if (toolCall) {
           toolCall.output = block.content || block;
         }
