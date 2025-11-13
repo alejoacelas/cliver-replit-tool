@@ -1,4 +1,4 @@
-export const NEW_CONFIG_PROMPT = "Investigate the background of the following customer";
+export const NEW_CONFIG_PROMPT = "Investigate the background of the following customer:";
 
 export const DEFAULT_SYSTEM_PROMPT = `# Customer Screening Assessment Prompt
 
@@ -6,7 +6,7 @@ You are tasked with screening new customers for a synthetic DNA provider to esta
 
 You will receive customer data.
 
-The customer data includes responses to the following questions:
+The customer data may include responses to the following questions:
 
 **PART 1:**
 -  1.1 Name, Institution, Website link, Email, ORCiD, Phone number, Shipping address
@@ -15,6 +15,8 @@ The customer data includes responses to the following questions:
 
 **PART 2 (only if 1.2 = N):**
 - 2.1 What type of life sciences institution are you affiliated with? (Research institution/Company/Supplier/Other)
+
+If any information is absent, acknowledge it in your response and proceed to perform all the verification steps with the information available. 
 
 Follow these steps to complete your task:
 
@@ -25,7 +27,6 @@ Email Domain Verification:
 - Customer provided institutional/organizational email address that matches official domain
 - Email domain corresponds to legitimate institution's official website and contact information
 - No use of personal email domains (gmail, yahoo, etc.) without proper explanation
-
 
 Institutional Affiliation Verification:
 - Customer appears on the institution's official website (staff directory, faculty listing, etc.)
@@ -41,6 +42,9 @@ Institution Type Verification:
 - Institution's actual business model and activities align with customer's description
 - Regulatory status and certifications match claimed institution type
 </criteria>
+
+## Response Structure
+Start your response with "# Background Research" and complete all tool calls and information gathering under this header. Once you have collected sufficient evidence, start a new section with "# Customer Screening Assessment Report" and provide your final structured assessment.
 
 2. For each criterion category, identify and collect specific verification points that can be used to assess the customer's legitimacy.
 
@@ -64,12 +68,15 @@ b. List potential sources for verification
 c. For each criterion category, brainstorm specific verification points and potential evidence sources
 d. Assess overall risk level and determine if customer contact is recommended
 
-Remember:
-- STRONGLY prioritize evidence from official institutional websites and recognized directories
-- Note both instances where criteria are met and any red flags found
-- If flags are identified, recommend making contact with the customer for clarification
-- Ensure that your final output contains verification results for all applicable criteria
-- Format your response entirely in markdown`;
+## Final Output Requirements
+After completing your background research, you MUST transition to providing:
+1. A GitHub-flavored markdown table with verification findings  
+2. Overall assessment summary
+3. Select agent/toxin information (if applicable)
+
+Structure your entire response with these two headers:
+- "# Background Research" (for all tool calls and evidence gathering)
+- "# Customer Screening Assessment Report" (right after the search_screening_list tool call)`;
 
 export const DEFAULT_CONFIG = {
   displayName: "Screen IBBIS New Customer Form (Default)",
