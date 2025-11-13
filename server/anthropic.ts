@@ -49,38 +49,6 @@ function getAnthropicClient(): Anthropic {
   return anthropic;
 }
 
-// Infer customer name and institution from message text
-export async function inferCustomerInfo(messageText: string): Promise<{ customerName: string; institution: string }> {
-  try {
-    const client = getAnthropicClient();
-    const message = await client.messages.create({
-      model: "claude-3-5-haiku-20241022", // Using Haiku for fast, efficient extraction
-      max_tokens: 100,
-      temperature: 0.3,
-      messages: [
-        {
-          role: "user",
-          content: `Extract the customer's name and institution/company name from this text. Respond ONLY with a JSON object in this exact format: {"customerName": "name or Unknown client", "institution": "institution or Unknown institution"}. If information is not found, use the default values.\n\nText: ${messageText}`
-        }
-      ],
-    });
-
-    const responseText = message.content[0].type === 'text' ? message.content[0].text : '{}';
-    const parsed = JSON.parse(responseText);
-
-    return {
-      customerName: parsed.customerName || "Unknown client",
-      institution: parsed.institution || "Unknown institution"
-    };
-  } catch (error) {
-    console.error("Error inferring customer info:", error);
-    return {
-      customerName: "Unknown client",
-      institution: "Unknown institution"
-    };
-  }
-}
-
 // Hardcoded MCP tools as specified by user
 const HARDCODED_MCP_TOOLS: MCPTool[] = [
   {
@@ -110,7 +78,7 @@ function buildTools(webSearchEnabled: boolean) {
     tools.push({
       type: "web_search_20250305",
       name: "web_search",
-      max_uses: 5
+      max_uses: 20
     });
   }
 
@@ -232,9 +200,23 @@ interface StreamCallParams {
   model: string;
   input: string;
   instructions?: string;
+  reasoningEffort?: 'low' | 'medium' | 'high' | null;
   webSearchEnabled: boolean;
   topP?: number | null;
   responseMode: 'markdown' | 'json-field';
+}
+
+// Map reasoning effort to thinking tokens
+function getThinkingTokens(reasoningEffort?: 'low' | 'medium' | 'high' | null): number {
+  if (!reasoningEffort) return 0;
+
+  const mapping = {
+    low: 5000,
+    medium: 5000,
+    high: 20000
+  };
+
+  return mapping[reasoningEffort];
 }
 
 // Stream responses from Anthropic API
@@ -243,6 +225,7 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
     model,
     input,
     instructions,
+    reasoningEffort,
     webSearchEnabled,
     topP,
     responseMode,
@@ -254,10 +237,17 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
     systemPrompt += "\n\nYou must respond with a JSON object containing a 'final_response' field with your answer.";
   }
 
+  // Calculate thinking tokens
+  const thinkingTokens = getThinkingTokens(reasoningEffort);
+
+  // Calculate max_tokens (ensure it's high enough to accommodate thinking + output)
+  // Using 16384 as base to ensure plenty of room for both thinking and output
+  const maxTokens = thinkingTokens > 0 ? Math.max(16384, thinkingTokens + 8192) : 16384;
+
   // Build request parameters
   const requestParams: any = {
     model,
-    max_tokens: 4096,
+    max_tokens: maxTokens,
     messages: [
       {
         role: "user",
@@ -266,6 +256,14 @@ export async function* streamAnthropicResponse(params: StreamCallParams) {
     ],
     stream: true,
   };
+
+  // Add thinking budget if reasoning effort is specified
+  if (thinkingTokens > 0) {
+    requestParams.thinking = {
+      type: "enabled",
+      budget_tokens: thinkingTokens
+    };
+  }
 
   // Add system prompt if specified
   if (systemPrompt) {

@@ -465,6 +465,7 @@ async function triggerStreamingResponses(
             model: config.model,
             input: userInput,
             instructions: config.systemPrompt || undefined,
+            reasoningEffort: config.reasoningEffort,
             webSearchEnabled: config.webSearchEnabled,
             topP: config.topP,
             responseMode: config.responseMode,

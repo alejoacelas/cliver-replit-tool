@@ -1,3 +1,5 @@
+export const NEW_CONFIG_PROMPT = "Investigate the background of the following customer";
+
 export const DEFAULT_SYSTEM_PROMPT = `# Customer Screening Assessment Prompt
 
 You are tasked with screening new customers for a synthetic DNA provider to establish reasonable belief about their legitimacy. Your goal is to thoroughly investigate the customer information provided in their onboarding document and provide a structured report on their credibility.
@@ -70,7 +72,7 @@ Remember:
 - Format your response entirely in markdown`;
 
 export const DEFAULT_CONFIG = {
-  displayName: "Default Analysis",
+  displayName: "Screen IBBIS New Customer Form (Default)",
   model: "claude-sonnet-4-20250514",
   systemPrompt: DEFAULT_SYSTEM_PROMPT,
   reasoningEffort: "medium" as const,

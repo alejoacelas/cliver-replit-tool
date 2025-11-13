@@ -60,7 +60,7 @@ export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: Co
       userId: userId,
       displayName: 'New Configuration',
       model: 'claude-sonnet-4-20250514',
-      systemPrompt: null,
+      systemPrompt: 'Investigate the background of the following customer',
       reasoningEffort: null,
       webSearchEnabled: true,
       topP: null,
@@ -150,16 +150,12 @@ export function ControlPanel({ open, onOpenChange, configs, onSave, userId }: Co
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="claude-sonnet-4-20250514">Claude Sonnet 4</SelectItem>
-                              <SelectItem value="gpt-5">GPT-5</SelectItem>
-                              <SelectItem value="gpt-4">GPT-4</SelectItem>
-                              <SelectItem value="o3">O3</SelectItem>
-                              <SelectItem value="gpt-4o-mini">GPT-4o Mini</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
 
                         <div>
-                          <Label className="text-xs">System Prompt (Optional)</Label>
+                          <Label className="text-xs">Customer Screening Instructions</Label>
                           <Textarea
                             value={config.systemPrompt || ''}
                             onChange={(e) => updateConfig(config.id, { systemPrompt: e.target.value || null })}
