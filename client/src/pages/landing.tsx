@@ -1,93 +1,50 @@
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Sparkles, Search, Zap, Shield } from "lucide-react";
 
 export default function Landing() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
-      {/* Header */}
       <header className="border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-semibold tracking-tight">Cliver</h1>
-          </div>
+        <div className="max-w-5xl mx-auto px-6 h-14 flex items-center justify-between">
+          <span className="text-sm font-medium tracking-tight">cliver</span>
           <Button
+            variant="ghost"
+            size="sm"
             onClick={() => window.location.href = '/api/login'}
             data-testid="button-login"
           >
-            Sign In
+            Sign in
           </Button>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
-        <div className="max-w-4xl w-full">
-          {/* Hero Section */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-6">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
-            <h2 className="text-4xl font-semibold tracking-tight mb-4">
-              AI-Powered Customer Screening
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Speed up customer onboarding and follow-up screening with automated customer reports. Flag potential issues in minutes, not hours.
-            </p>
-          </div>
-
-          {/* Features Grid */}
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-            <Card className="p-6 hover-elevate">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Zap className="w-5 h-5 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Multi-Model Analysis</h3>
-              <p className="text-sm text-muted-foreground">
-                Get simultaneous responses from multiple AI models for comprehensive insights
-              </p>
-            </Card>
-
-            <Card className="p-6 hover-elevate">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Search className="w-5 h-5 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Web Search Integration</h3>
-              <p className="text-sm text-muted-foreground">
-                Powered by real-time web search and custom screening tools
-              </p>
-            </Card>
-
-            <Card className="p-6 hover-elevate">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Shield className="w-5 h-5 text-primary" />
-              </div>
-              <h3 className="font-semibold mb-2">Configurable Workflows</h3>
-              <p className="text-sm text-muted-foreground">
-                Customize AI models, prompts, and reasoning settings for your needs
-              </p>
-            </Card>
-          </div>
-
-          {/* CTA */}
-          <div className="text-center">
+      <main className="flex-1 flex items-center justify-center px-6">
+        <div className="max-w-lg w-full text-center">
+          <h1 className="text-3xl font-semibold tracking-tight mb-3">
+            Customer screening, automated
+          </h1>
+          <p className="text-muted-foreground text-base mb-8 leading-relaxed">
+            Run background research on customers in minutes using configurable AI models with web search and custom tools.
+          </p>
+          <div className="flex items-center justify-center gap-3">
             <Button
-              size="lg"
-              onClick={() => window.location.href = '/api/guest-login'}
-              className="px-8"
+              onClick={() => window.location.href = '/api/login'}
               data-testid="button-get-started"
             >
-              Get Started
+              Get started
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => window.location.href = '/api/guest-login'}
+            >
+              Try as guest
             </Button>
           </div>
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-border py-6">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Cliver. Powered by AI.
+      <footer className="border-t border-border py-5">
+        <div className="max-w-5xl mx-auto px-6 text-center text-xs text-muted-foreground">
+          cliver
         </div>
       </footer>
     </div>

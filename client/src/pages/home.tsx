@@ -8,7 +8,7 @@ import { SidebarProvider, Sidebar, SidebarContent, SidebarHeader, SidebarFooter,
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Plus, Settings, Send, Loader2, Download, Key } from "lucide-react";
+import { Plus, Settings, Send, Loader2, Download, Key } from "lucide-react";
 import { Link } from "wouter";
 import { ConversationList } from "@/components/ConversationList";
 import { ResponseCard } from "@/components/ResponseCard";
@@ -26,7 +26,6 @@ export default function Home() {
   const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Redirect if not authenticated
   useEffect(() => {
     if (!authLoading && !user) {
       toast({
@@ -40,36 +39,31 @@ export default function Home() {
     }
   }, [user, authLoading, toast]);
 
-  // Fetch conversations
   const { data: conversations = [], isLoading: conversationsLoading } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
     enabled: !!user,
     retry: false,
   });
 
-  // Fetch active conversation messages with polling for streaming responses
   const { data: messages = [] } = useQuery<(Message & { responses: MessageResponse[] })[]>({
     queryKey: ["/api/conversations", activeConversationId, "messages"],
     enabled: !!activeConversationId,
     retry: false,
     refetchInterval: (query) => {
-      // Poll every 1 second if there are streaming responses
       const data = query.state.data;
-      const hasStreamingResponses = data?.some(msg => 
+      const hasStreamingResponses = data?.some(msg =>
         msg.responses?.some(r => r.status === "streaming")
       );
       return hasStreamingResponses ? 1000 : false;
     },
   });
 
-  // Fetch user call configs
   const { data: callConfigs = [] } = useQuery<UserCallConfig[]>({
     queryKey: ["/api/call-configs"],
     enabled: !!user,
     retry: false,
   });
 
-  // Create conversation mutation
   const createConversationMutation = useMutation({
     mutationFn: async (title: string) => {
       const res = await apiRequest("POST", "/api/conversations", { title });
@@ -77,31 +71,19 @@ export default function Home() {
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      // Clear previous conversation's messages from cache
       queryClient.removeQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
       setActiveConversationId(data.id);
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        toast({ title: "Unauthorized", description: "You are logged out. Logging in again...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: "Failed to create conversation",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to create conversation", variant: "destructive" });
     },
   });
 
-  // Send message mutation
   const sendMessageMutation = useMutation({
     mutationFn: async ({ conversationId, content }: { conversationId: string; content: string }) => {
       const res = await apiRequest("POST", `/api/conversations/${conversationId}/messages`, { content });
@@ -109,9 +91,7 @@ export default function Home() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/conversations", activeConversationId, "messages"] });
-      // Invalidate conversations immediately
       queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
-      // Invalidate again after 2 seconds to pick up title inference (happens in background)
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/conversations"] });
       }, 2000);
@@ -119,53 +99,29 @@ export default function Home() {
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        toast({ title: "Unauthorized", description: "You are logged out. Logging in again...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: "Failed to send message",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to send message", variant: "destructive" });
     },
   });
 
-  // Update call configs mutation
   const updateCallConfigsMutation = useMutation({
     mutationFn: async (configs: UserCallConfig[]) => {
       return await apiRequest("PUT", "/api/call-configs", { configs });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/call-configs"] });
-      toast({
-        title: "Success",
-        description: "Call configurations updated",
-      });
+      toast({ title: "Saved", description: "Configuration updated" });
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
+        toast({ title: "Unauthorized", description: "You are logged out. Logging in again...", variant: "destructive" });
+        setTimeout(() => { window.location.href = "/api/login"; }, 500);
         return;
       }
-      toast({
-        title: "Error",
-        description: "Failed to update configurations",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Failed to update configurations", variant: "destructive" });
     },
   });
 
@@ -175,7 +131,6 @@ export default function Home() {
 
   const handleSendMessage = async () => {
     if (!input.trim() || !activeConversationId) return;
-    
     sendMessageMutation.mutate({
       conversationId: activeConversationId,
       content: input,
@@ -189,12 +144,10 @@ export default function Home() {
     }
   };
 
-  // Auto scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Select first conversation if none selected
   useEffect(() => {
     if (!activeConversationId && conversations.length > 0) {
       setActiveConversationId(conversations[0].id);
@@ -202,13 +155,13 @@ export default function Home() {
   }, [conversations, activeConversationId]);
 
   const sidebarStyle = {
-    "--sidebar-width": "280px",
+    "--sidebar-width": "260px",
   } as React.CSSProperties;
 
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -216,9 +169,8 @@ export default function Home() {
   return (
     <SidebarProvider style={sidebarStyle}>
       <div className="flex h-screen w-full">
-        {/* Sidebar */}
         <Sidebar>
-          <SidebarHeader className="border-b border-sidebar-border p-4">
+          <SidebarHeader className="border-b border-sidebar-border px-3 py-3">
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
@@ -227,7 +179,7 @@ export default function Home() {
                   data-testid="button-new-chat"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>New Chat</span>
+                  <span>New chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             </SidebarMenu>
@@ -242,94 +194,91 @@ export default function Home() {
               />
             </ScrollArea>
           </SidebarContent>
-          <SidebarFooter className="border-t border-sidebar-border p-4">
+          <SidebarFooter className="border-t border-sidebar-border px-3 py-3">
             {user?.isGuest ? (
               <button
                 onClick={() => window.location.href = '/api/login'}
-                className="w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
+                className="w-full text-xs text-muted-foreground hover:text-foreground rounded-md p-2.5 text-left transition-colors"
                 data-testid="button-guest-signin-prompt"
               >
-                Sign in to save your conversations
+                Sign in to save conversations
               </button>
             ) : (
-              <Link 
+              <Link
                 href="/api-keys"
-                className="flex items-center gap-2 w-full text-sm text-muted-foreground hover-elevate active-elevate-2 rounded-md p-3 text-left transition-colors"
+                className="flex items-center gap-2 w-full text-xs text-muted-foreground hover:text-foreground rounded-md p-2.5 text-left transition-colors"
                 data-testid="link-api-keys"
               >
-                <Key className="w-4 h-4" />
+                <Key className="w-3.5 h-3.5" />
                 <span>API Keys</span>
               </Link>
             )}
           </SidebarFooter>
         </Sidebar>
 
-        {/* Main Content */}
-        <div className="flex flex-col flex-1">
-          {/* Header */}
-          <header className="flex items-center justify-between p-4 border-b border-border">
+        <div className="flex flex-col flex-1 min-w-0">
+          <header className="flex items-center justify-between px-4 h-12 border-b border-border shrink-0">
             <div className="flex items-center gap-3">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-primary" />
-                <h1 className="text-lg font-semibold">Cliver</h1>
-              </div>
+              <span className="text-sm font-medium tracking-tight">cliver</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
+                className="h-8 w-8"
                 onClick={() => setExportDialogOpen(true)}
                 data-testid="button-export"
               >
-                <Download className="w-4 h-4" />
-              </Button>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setControlPanelOpen(true)}
-                data-testid="button-control-panel"
-              >
-                <Settings className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
               </Button>
               <Button
                 variant="ghost"
+                size="icon"
+                className="h-8 w-8"
+                onClick={() => setControlPanelOpen(true)}
+                data-testid="button-control-panel"
+              >
+                <Settings className="w-3.5 h-3.5" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-xs ml-1"
                 onClick={() => window.location.href = user?.isGuest ? '/api/login' : '/api/logout'}
                 data-testid={user?.isGuest ? "button-signin" : "button-logout"}
               >
-                {user?.isGuest ? "Sign In" : "Log Out"}
+                {user?.isGuest ? "Sign in" : "Log out"}
               </Button>
             </div>
           </header>
 
-          {/* Messages Area */}
           <ScrollArea className="flex-1">
-            <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <div className="max-w-3xl mx-auto px-6 py-8">
               {!activeConversationId ? (
-                <div className="flex flex-col items-center justify-center h-full text-center py-20">
-                  <Sparkles className="w-12 h-12 text-muted-foreground mb-4" />
-                  <h2 className="text-2xl font-semibold mb-2">Welcome to Cliver</h2>
-                  <p className="text-muted-foreground mb-6 max-w-md">
-                    Start a new conversation to begin AI-powered customer background research
+                <div className="flex flex-col items-center justify-center text-center py-24">
+                  <h2 className="text-lg font-medium mb-1.5">No conversation selected</h2>
+                  <p className="text-sm text-muted-foreground mb-5">
+                    Start a new chat to begin screening
                   </p>
-                  <Button onClick={handleNewChat} data-testid="button-start-chat">
-                    <Plus className="w-4 h-4 mr-2" />
-                    New Chat
+                  <Button size="sm" onClick={handleNewChat} data-testid="button-start-chat">
+                    <Plus className="w-3.5 h-3.5 mr-1.5" />
+                    New chat
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {messages.map((message) => (
-                    <div key={message.id} className="space-y-4">
-                      {/* User Message */}
+                    <div key={message.id} className="space-y-3">
                       <div className="flex justify-end">
-                        <div className="bg-primary text-primary-foreground rounded-lg px-4 py-3 max-w-2xl" data-testid={`message-user-${message.id}`}>
+                        <div
+                          className="bg-foreground text-background rounded-lg px-4 py-2.5 max-w-xl text-sm"
+                          data-testid={`message-user-${message.id}`}
+                        >
                           {message.content}
                         </div>
                       </div>
-
-                      {/* AI Responses */}
-                      <div className="space-y-4">
+                      <div className="space-y-3">
                         {message.responses?.map((response) => (
                           <ResponseCard
                             key={response.id}
@@ -346,16 +295,15 @@ export default function Home() {
             </div>
           </ScrollArea>
 
-          {/* Input Area */}
           {activeConversationId && (
-            <div className="border-t border-border p-6 bg-background">
-              <div className="max-w-5xl mx-auto relative">
+            <div className="border-t border-border p-4 shrink-0">
+              <div className="max-w-3xl mx-auto relative">
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder="Paste customer information to research..."
-                  className="pr-12 resize-none min-h-[60px]"
+                  placeholder="Paste customer information..."
+                  className="pr-12 resize-none min-h-[52px] text-sm"
                   disabled={sendMessageMutation.isPending}
                   data-testid="input-message"
                 />
@@ -363,13 +311,13 @@ export default function Home() {
                   onClick={handleSendMessage}
                   disabled={!input.trim() || sendMessageMutation.isPending}
                   size="icon"
-                  className="absolute right-2 bottom-2 rounded-full"
+                  className="absolute right-2 bottom-2 h-7 w-7 rounded-md"
                   data-testid="button-send"
                 >
                   {sendMessageMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <Send className="w-4 h-4" />
+                    <Send className="w-3.5 h-3.5" />
                   )}
                 </Button>
               </div>
@@ -378,7 +326,6 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Control Panel */}
       <ControlPanel
         open={controlPanelOpen}
         onOpenChange={setControlPanelOpen}
@@ -387,7 +334,6 @@ export default function Home() {
         onSave={(configs) => updateCallConfigsMutation.mutate(configs)}
       />
 
-      {/* Export Dialog */}
       <ExportDialog
         open={exportDialogOpen}
         onOpenChange={setExportDialogOpen}

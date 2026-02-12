@@ -1,6 +1,5 @@
 import { SidebarGroup, SidebarGroupContent, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from "@/components/ui/sidebar";
-import { MessageSquare, Loader2 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { Loader2 } from "lucide-react";
 import type { Conversation } from "@shared/schema";
 
 interface ConversationListProps {
@@ -10,19 +9,19 @@ interface ConversationListProps {
   isLoading?: boolean;
 }
 
-export function ConversationList({ 
-  conversations, 
-  activeConversationId, 
+export function ConversationList({
+  conversations,
+  activeConversationId,
   onSelectConversation,
-  isLoading 
+  isLoading
 }: ConversationListProps) {
-  
+
   if (isLoading) {
     return (
       <SidebarGroup>
         <SidebarGroupContent>
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           </div>
         </SidebarGroupContent>
       </SidebarGroup>
@@ -34,12 +33,8 @@ export function ConversationList({
       <SidebarGroup>
         <SidebarGroupContent>
           <div className="flex flex-col items-center justify-center py-8 text-center px-4">
-            <MessageSquare className="w-8 h-8 text-muted-foreground mb-3" />
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               No conversations yet
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">
-              Start a new chat to begin
             </p>
           </div>
         </SidebarGroupContent>
@@ -47,7 +42,6 @@ export function ConversationList({
     );
   }
 
-  // Group conversations by time
   const now = new Date();
   const today = conversations.filter(c => {
     const date = new Date(c.updatedAt);
@@ -65,7 +59,7 @@ export function ConversationList({
     const date = new Date(c.updatedAt);
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
-    return date > weekAgo && date.toDateString() !== now.toDateString() && 
+    return date > weekAgo && date.toDateString() !== now.toDateString() &&
            date.toDateString() !== new Date(now.setDate(now.getDate() - 1)).toDateString();
   });
 
@@ -76,99 +70,37 @@ export function ConversationList({
     return date <= weekAgo;
   });
 
+  const renderGroup = (label: string, items: Conversation[]) => {
+    if (items.length === 0) return null;
+    return (
+      <SidebarGroup>
+        <div className="px-3 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{label}</div>
+        <SidebarGroupContent>
+          <SidebarMenu>
+            {items.map((conversation) => (
+              <SidebarMenuItem key={conversation.id}>
+                <SidebarMenuButton
+                  onClick={() => onSelectConversation(conversation.id)}
+                  isActive={activeConversationId === conversation.id}
+                  className="w-full text-xs"
+                  data-testid={`conversation-item-${conversation.id}`}
+                >
+                  <span className="truncate flex-1 text-left">{conversation.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroupContent>
+      </SidebarGroup>
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      {today.length > 0 && (
-        <SidebarGroup>
-          <div className="px-3 py-2 text-xs font-medium text-muted-foreground">Today</div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {today.map((conversation) => (
-                <SidebarMenuItem key={conversation.id}>
-                  <SidebarMenuButton
-                    onClick={() => onSelectConversation(conversation.id)}
-                    isActive={activeConversationId === conversation.id}
-                    className="w-full"
-                    data-testid={`conversation-item-${conversation.id}`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="truncate flex-1 text-left">{conversation.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
-
-      {yesterday.length > 0 && (
-        <SidebarGroup>
-          <div className="px-3 py-2 text-xs font-medium text-muted-foreground">Yesterday</div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {yesterday.map((conversation) => (
-                <SidebarMenuItem key={conversation.id}>
-                  <SidebarMenuButton
-                    onClick={() => onSelectConversation(conversation.id)}
-                    isActive={activeConversationId === conversation.id}
-                    className="w-full"
-                    data-testid={`conversation-item-${conversation.id}`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="truncate flex-1 text-left">{conversation.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
-
-      {lastWeek.length > 0 && (
-        <SidebarGroup>
-          <div className="px-3 py-2 text-xs font-medium text-muted-foreground">Last 7 Days</div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {lastWeek.map((conversation) => (
-                <SidebarMenuItem key={conversation.id}>
-                  <SidebarMenuButton
-                    onClick={() => onSelectConversation(conversation.id)}
-                    isActive={activeConversationId === conversation.id}
-                    className="w-full"
-                    data-testid={`conversation-item-${conversation.id}`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="truncate flex-1 text-left">{conversation.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
-
-      {older.length > 0 && (
-        <SidebarGroup>
-          <div className="px-3 py-2 text-xs font-medium text-muted-foreground">Older</div>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {older.map((conversation) => (
-                <SidebarMenuItem key={conversation.id}>
-                  <SidebarMenuButton
-                    onClick={() => onSelectConversation(conversation.id)}
-                    isActive={activeConversationId === conversation.id}
-                    className="w-full"
-                    data-testid={`conversation-item-${conversation.id}`}
-                  >
-                    <MessageSquare className="w-4 h-4" />
-                    <span className="truncate flex-1 text-left">{conversation.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-      )}
+    <div className="space-y-2 py-1">
+      {renderGroup("Today", today)}
+      {renderGroup("Yesterday", yesterday)}
+      {renderGroup("Last 7 days", lastWeek)}
+      {renderGroup("Older", older)}
     </div>
   );
 }
