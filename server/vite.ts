@@ -18,7 +18,7 @@ export function log(message: string, source = "express") {
 export async function setupVite(app: Express, server: Server) {
   // Dynamic imports — vite is a devDependency, only available in dev
   const viteModule = await import("vite");
-  const viteConfig = (await import("../vite.config")).default;
+  const react = (await import("@vitejs/plugin-react")).default;
   const viteLogger = viteModule.createLogger();
 
   const serverOptions = {
@@ -28,7 +28,19 @@ export async function setupVite(app: Express, server: Server) {
   };
 
   const vite = await viteModule.createServer({
-    ...viteConfig,
+    plugins: [react()],
+    resolve: {
+      alias: {
+        "@": path.resolve(import.meta.dirname, "..", "client", "src"),
+        "@shared": path.resolve(import.meta.dirname, "..", "shared"),
+        "@assets": path.resolve(import.meta.dirname, "..", "attached_assets"),
+      },
+    },
+    root: path.resolve(import.meta.dirname, "..", "client"),
+    build: {
+      outDir: path.resolve(import.meta.dirname, "..", "dist/public"),
+      emptyOutDir: true,
+    },
     configFile: false,
     customLogger: {
       ...viteLogger,
