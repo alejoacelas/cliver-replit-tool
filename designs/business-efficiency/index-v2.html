@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cliver - Reduce Customer Screening Costs by 90%</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:wght@300;400;700;900&family=Source+Sans+3:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --corporate-white: #FFFFFF;
+            --business-gray-50: #F8FAFC;
+            --business-gray-100: #F1F5F9;
+            --business-gray-200: #E2E8F0;
+            --business-gray-300: #CBD5E1;
+            --business-gray-400: #94A3B8;
+            --business-gray-500: #64748B;
+            --business-gray-600: #475569;
+            --business-gray-700: #334155;
+            --business-gray-800: #1E293B;
+            --business-gray-900: #0F172A;
+            --corporate-blue-500: #3B82F6;
+            --corporate-blue-600: #2563EB;
+            --corporate-blue-700: #1D4ED8;
+            --corporate-blue-800: #1E40AF;
+            --brand-purple: #8B5CF6;
+            --success-green: #10B981;
+            --executive-gold: #F59E0B;
+            --professional-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --corporate-shadow: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+            --executive-shadow: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Source Sans 3', -apple-system, BlinkMacSystemFont, sans-serif;
+            line-height: 1.6;
+            color: var(--business-gray-800);
+            background-color: var(--corporate-white);
+            font-weight: 400;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px;
+        }
+
+        .corporate-header {
+            background-color: var(--corporate-white);
+            border-bottom: 1px solid var(--business-gray-200);
+            padding: 20px 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(10px);
+            box-shadow: var(--professional-shadow);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .company-logo {
+            font-family: 'Merriweather', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--business-gray-900);
+            letter-spacing: -0.5px;
+        }
+
+        .nav-menu {
+            display: flex;
+            align-items: center;
+            gap: 40px;
+        }
+
+        .nav-link {
+            color: var(--business-gray-600);
+            text-decoration: none;
+            font-size: 16px;
+            font-weight: 500;
+            transition: color 0.2s ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--corporate-blue-600);
+        }
+
+        .nav-link::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 0;
+            width: 0;
+            height: 2px;
+            background: var(--corporate-blue-600);
+            transition: width 0.2s ease;
+        }
+
+        .nav-link:hover::after {
+            width: 100%;
+        }
+
+        .btn-corporate {
+            background: var(--corporate-blue-600);
+            color: var(--corporate-white);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-decoration: none;
+            display: inline-block;
+            font-family: inherit;
+        }
+
+        .btn-corporate:hover {
+            background: var(--corporate-blue-700);
+            transform: translateY(-1px);
+            box-shadow: var(--corporate-shadow);
+        }
+
+        .hero-section {
+            padding: 100px 0 120px;
+            background: var(--corporate-white);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-pattern {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background:
+                radial-gradient(ellipse at 25% 25%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+                radial-gradient(ellipse at 75% 75%, rgba(139, 92, 246, 0.05) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 100%, rgba(16, 185, 129, 0.04) 0%, transparent 50%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 80px;
+            align-items: center;
+        }
+
+        .hero-text {
+            max-width: 600px;
+        }
+
+        .hero-title {
+            font-family: 'Merriweather', serif;
+            font-size: 56px;
+            font-weight: 900;
+            line-height: 1.1;
+            color: var(--business-gray-900);
+            margin-bottom: 24px;
+            letter-spacing: -1px;
+        }
+
+        .cost-highlight {
+            color: var(--success-green);
+            position: relative;
+        }
+
+        .footnote-ref {
+            color: var(--brand-purple);
+            font-size: 42px;
+            vertical-align: super;
+            line-height: 0;
+        }
+
+        .cost-highlight::after {
+            content: '';
+            position: absolute;
+            bottom: 2px;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: rgba(16, 185, 129, 0.2);
+            z-index: -1;
+            border-radius: 4px;
+        }
+
+        .hero-subtitle {
+            font-size: 22px;
+            color: var(--business-gray-600);
+            margin-bottom: 40px;
+            line-height: 1.4;
+            font-weight: 400;
+        }
+
+        .business-metrics {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 32px;
+            margin-bottom: 48px;
+        }
+
+        .metric-card {
+            background: var(--corporate-white);
+            border: 1px solid var(--business-gray-200);
+            border-radius: 12px;
+            padding: 28px 24px;
+            text-align: center;
+            box-shadow: var(--professional-shadow);
+            transition: all 0.3s ease;
+        }
+
+        .metric-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--executive-shadow);
+            border-color: var(--brand-purple);
+        }
+
+        .metric-value {
+            font-family: 'Merriweather', serif;
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--corporate-blue-600);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .metric-label {
+            font-size: 14px;
+            color: var(--business-gray-500);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .hero-cta {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .demo-section {
+            background: var(--corporate-white);
+            border: 2px solid var(--business-gray-200);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: var(--corporate-shadow);
+            position: relative;
+        }
+
+        .demo-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--corporate-blue-600), var(--brand-purple));
+            border-radius: 16px 16px 0 0;
+        }
+
+        .demo-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .demo-title {
+            font-family: 'Merriweather', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--business-gray-900);
+            margin-bottom: 12px;
+        }
+
+        .demo-subtitle {
+            font-size: 16px;
+            color: var(--business-gray-600);
+            line-height: 1.4;
+        }
+
+        .demo-button {
+            width: 100%;
+            background: linear-gradient(135deg, var(--corporate-blue-600), var(--brand-purple));
+            color: var(--corporate-white);
+            border: none;
+            padding: 18px 24px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--executive-shadow);
+        }
+
+        .demo-note {
+            text-align: center;
+            margin-top: 16px;
+            font-size: 14px;
+            color: var(--business-gray-500);
+        }
+
+        .value-proposition {
+            padding: 120px 0;
+            background: var(--corporate-white);
+        }
+
+        .section-header {
+            text-align: center;
+            margin-bottom: 80px;
+        }
+
+        .section-title {
+            font-family: 'Merriweather', serif;
+            font-size: 42px;
+            font-weight: 700;
+            color: var(--business-gray-900);
+            margin-bottom: 20px;
+            line-height: 1.2;
+        }
+
+        .section-subtitle {
+            font-size: 18px;
+            color: var(--business-gray-600);
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+        }
+
+        .benefit-card {
+            background: var(--corporate-white);
+            border: 1px solid var(--business-gray-200);
+            border-radius: 12px;
+            padding: 40px 32px;
+            text-align: center;
+            transition: all 0.3s ease;
+            position: relative;
+            box-shadow: var(--professional-shadow);
+        }
+
+        .benefit-card:hover {
+            transform: translateY(-8px);
+            box-shadow: var(--executive-shadow);
+            border-color: var(--corporate-blue-600);
+        }
+
+        .benefit-title {
+            font-family: 'Merriweather', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--business-gray-900);
+            margin-bottom: 16px;
+        }
+
+        .benefit-description {
+            font-size: 16px;
+            color: var(--business-gray-600);
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .benefit-stat {
+            font-family: 'Merriweather', serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--success-green);
+            display: block;
+        }
+
+        .footnote-section {
+            padding: 60px 0;
+            background: var(--business-gray-50);
+            border-top: 1px solid var(--business-gray-200);
+        }
+
+        .footnote-content {
+            max-width: 800px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .footnote-text {
+            font-size: 14px;
+            color: var(--business-gray-600);
+            line-height: 1.5;
+        }
+
+        .footnote-marker {
+            color: var(--brand-purple);
+            font-weight: 700;
+        }
+
+        .corporate-footer {
+            background: var(--business-gray-900);
+            color: var(--business-gray-300);
+            padding: 80px 0 40px;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 80px;
+            margin-bottom: 40px;
+        }
+
+        .footer-brand {
+            max-width: 400px;
+        }
+
+        .footer-logo {
+            font-family: 'Merriweather', serif;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--corporate-white);
+            margin-bottom: 20px;
+        }
+
+        .footer-description {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 32px;
+            color: var(--business-gray-400);
+        }
+
+        .footer-links {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 60px;
+        }
+
+        .footer-section h4 {
+            font-family: 'Merriweather', serif;
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--corporate-white);
+            margin-bottom: 20px;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section li {
+            margin-bottom: 12px;
+        }
+
+        .footer-section a {
+            color: var(--business-gray-400);
+            text-decoration: none;
+            font-size: 16px;
+            transition: color 0.2s ease;
+        }
+
+        .footer-section a:hover {
+            color: var(--corporate-white);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid var(--business-gray-700);
+            padding-top: 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--business-gray-500);
+            font-size: 14px;
+        }
+
+        .slide-up {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: slideUp 0.8s ease forwards;
+        }
+
+        .slide-up-delay-1 { animation-delay: 0.2s; }
+        .slide-up-delay-2 { animation-delay: 0.4s; }
+        .slide-up-delay-3 { animation-delay: 0.6s; }
+
+        @keyframes slideUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .hero-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+                text-align: center;
+            }
+
+            .hero-title {
+                font-size: 42px;
+            }
+
+            .business-metrics {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .hero-cta {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .footer-content {
+                grid-template-columns: 1fr;
+                gap: 60px;
+            }
+
+            .footer-links {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+
+            .footer-bottom {
+                flex-direction: column;
+                gap: 16px;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header class="corporate-header">
+        <div class="container">
+            <div class="header-content">
+                <div class="company-logo">Cliver</div>
+                <nav class="nav-menu">
+                    <a href="#benefits" class="nav-link">Business Benefits</a>
+                    <a href="#features" class="nav-link">Platform</a>
+                    <a href="#enterprise" class="nav-link">Enterprise Solutions</a>
+                    <a href="#" class="btn-corporate">Request Demo</a>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <section class="hero-section">
+        <div class="hero-pattern"></div>
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <h1 class="hero-title slide-up">
+                        Reduce Screening<br>
+                        <span class="cost-highlight">Costs by 90%</span><span class="footnote-ref">*</span>
+                    </h1>
+                    <p class="hero-subtitle slide-up slide-up-delay-1">
+                        Automated customer research delivers faster decisions and lower costs.
+                        Transform your screening process with AI-powered intelligence that scales
+                        with your business growth.
+                    </p>
+                    <div class="business-metrics slide-up slide-up-delay-2">
+                        <div class="metric-card">
+                            <span class="metric-value">90%</span>
+                            <span class="metric-label">Cost Reduction</span>
+                        </div>
+                        <div class="metric-card">
+                            <span class="metric-value">10x</span>
+                            <span class="metric-label">Faster Decisions</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="demo-section slide-up slide-up-delay-2">
+                    <div class="demo-header">
+                        <h3 class="demo-title">Book a Demo</h3>
+                        <p class="demo-subtitle">
+                            See how our AI platform reduces customer screening costs
+                            while improving decision speed and accuracy.
+                        </p>
+                    </div>
+                    <button class="demo-button" onclick="bookDemo()">
+                        Schedule Demo
+                    </button>
+                    <p class="demo-note">
+                        15-minute demo • No commitment required • See immediate results
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="value-proposition" id="benefits">
+        <div class="container">
+            <div class="section-header">
+                <h2 class="section-title">Drive Business Efficiency</h2>
+                <p class="section-subtitle">
+                    Streamline your customer screening process with proven AI technology
+                    that delivers measurable business results and competitive advantages.
+                </p>
+            </div>
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <h3 class="benefit-title">Immediate Cost Savings</h3>
+                    <p class="benefit-description">
+                        Reduce manual screening costs by up to 90% while improving
+                        accuracy and consistency across all customer evaluations.
+                    </p>
+                    <span class="benefit-stat">$50K+</span>
+                    <small style="color: var(--business-gray-500);">Average Annual Savings</small>
+                </div>
+                <div class="benefit-card">
+                    <h3 class="benefit-title">Accelerated Decision Making</h3>
+                    <p class="benefit-description">
+                        Complete comprehensive customer research in minutes instead
+                        of days, enabling faster business development and partnerships.
+                    </p>
+                    <span class="benefit-stat">10x</span>
+                    <small style="color: var(--business-gray-500);">Faster Processing Time</small>
+                </div>
+                <div class="benefit-card">
+                    <h3 class="benefit-title">Enhanced Accuracy</h3>
+                    <p class="benefit-description">
+                        Multi-model AI analysis provides more comprehensive and
+                        reliable customer intelligence than traditional manual methods.
+                    </p>
+                    <span class="benefit-stat">99.2%</span>
+                    <small style="color: var(--business-gray-500);">Accuracy Rate</small>
+                </div>
+                <div class="benefit-card">
+                    <h3 class="benefit-title">Scalable Operations</h3>
+                    <p class="benefit-description">
+                        Handle unlimited screening requests without increasing headcount
+                        or operational complexity. Perfect for growing businesses.
+                    </p>
+                    <span class="benefit-stat">∞</span>
+                    <small style="color: var(--business-gray-500);">Unlimited Capacity</small>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="footnote-section">
+        <div class="container">
+            <div class="footnote-content">
+                <p class="footnote-text">
+                    <span class="footnote-marker">*</span> Cost reduction based on comparison against human reviewers with experience in biosecurity on the task of deciding whether to ship/follow-up/deny orders based solely on publicly available information. Forthcoming publication.
+                </p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="corporate-footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-brand">
+                    <div class="footer-logo">Cliver</div>
+                    <p class="footer-description">
+                        The leading AI-powered customer screening platform for biotech
+                        and life sciences companies. Delivering measurable business results
+                        through intelligent automation and proven ROI.
+                    </p>
+                    <a href="#" class="btn-corporate">Start Free Trial</a>
+                </div>
+                <div class="footer-links">
+                    <div class="footer-section">
+                        <h4>Business Solutions</h4>
+                        <ul>
+                            <li><a href="#">Enterprise Plans</a></li>
+                            <li><a href="#">Demo Scheduling</a></li>
+                            <li><a href="#">Case Studies</a></li>
+                            <li><a href="#">Implementation</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Resources</h4>
+                        <ul>
+                            <li><a href="#">Business Guides</a></li>
+                            <li><a href="#">Whitepapers</a></li>
+                            <li><a href="#">Webinars</a></li>
+                            <li><a href="#">Support Center</a></li>
+                        </ul>
+                    </div>
+                    <div class="footer-section">
+                        <h4>Company</h4>
+                        <ul>
+                            <li><a href="#">About Us</a></li>
+                            <li><a href="#">Leadership</a></li>
+                            <li><a href="#">Careers</a></li>
+                            <li><a href="#">Contact Sales</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2026 Cliver Corporation. All rights reserved.</p>
+                <p>Driving business efficiency through intelligent automation.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function bookDemo() {
+            const button = document.querySelector('.demo-button');
+            const originalText = button.textContent;
+
+            button.textContent = 'Processing...';
+            button.disabled = true;
+
+            setTimeout(() => {
+                button.textContent = 'Demo Scheduled!';
+                setTimeout(() => {
+                    // In a real implementation, this would redirect to booking system
+                    alert('Thank you for your interest! In the live system, you would be redirected to our demo scheduling platform to choose a time that works for you.');
+                    button.textContent = originalText;
+                    button.disabled = false;
+                }, 2000);
+            }, 1500);
+        }
+
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

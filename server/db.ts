@@ -1,23 +1,4 @@
-// Referenced from javascript_database blueprint
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
 import * as schema from "@shared/schema";
-
-// Configure WebSocket with SSL for Neon (accept self-signed certificates in development only)
-if (process.env.NODE_ENV === 'development') {
-  class CustomWebSocket extends ws {
-    constructor(address: string, protocols?: string | string[]) {
-      super(address, protocols, {
-        rejectUnauthorized: false
-      });
-    }
-  }
-  neonConfig.webSocketConstructor = CustomWebSocket as any;
-} else {
-  // Production: use default WebSocket with full TLS verification
-  neonConfig.webSocketConstructor = ws;
-}
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -25,17 +6,49 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Configure connection pool with proper settings to handle connection issues
-export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  max: 10,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
-});
+const isLocalDev = process.env.NODE_ENV === 'development' && !process.env.DATABASE_URL.includes('neon.tech');
 
-// Add error handler for pool errors
-pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
-});
+let pool: any;
+let db: any;
 
-export const db = drizzle({ client: pool, schema });
+if (isLocalDev) {
+  // Local dev: use standard pg driver (works with Fly proxy)
+  const pg = await import('pg');
+  const Pool = pg.default?.Pool ?? pg.Pool;
+  const { drizzle } = await import('drizzle-orm/node-postgres');
+
+  pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  pool.on('error', (err: Error) => {
+    console.error('Unexpected database pool error:', err);
+  });
+
+  db = drizzle(pool, { schema });
+} else {
+  // Production / Neon: use Neon serverless driver with WebSockets
+  const { Pool: NeonPool, neonConfig } = await import('@neondatabase/serverless');
+  const { drizzle: neonDrizzle } = await import('drizzle-orm/neon-serverless');
+  const ws = (await import('ws')).default;
+
+  neonConfig.webSocketConstructor = ws;
+
+  pool = new NeonPool({
+    connectionString: process.env.DATABASE_URL,
+    max: 10,
+    idleTimeoutMillis: 30000,
+    connectionTimeoutMillis: 10000,
+  });
+
+  pool.on('error', (err: Error) => {
+    console.error('Unexpected database pool error:', err);
+  });
+
+  db = neonDrizzle({ client: pool, schema });
+}
+
+export { pool, db };
