@@ -100,7 +100,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateResponse(responseRecord.id, {
             content: fullContent,
             status: "completed",
-            toolCalls: event.data.audit.toolCalls,
+            toolCalls: event.data,
             duration,
           });
         }
