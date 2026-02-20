@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { queryClient, apiRequest, getBrowserId } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Plus, Send, Loader2, ChevronDown, ChevronRight } from "lucide-react";
@@ -36,28 +36,28 @@ const emptyForm: FormFields = { name: "", email: "", institution: "", orderDetai
 
 const exampleProfiles: (FormFields & { label: string })[] = [
   {
+    label: "Virology researcher",
+    name: "Craig Thompson",
+    email: "c.thompson@warwick.ac.uk",
+    institution: "University of Warwick, Virology & Vaccinology Group",
+    orderDetails: "SARS-CoV-2 spike protein S1 subunit construct",
+    notes: "ORCID: 0000-0001-9248-9365. Research focus: SARS-CoV-2, influenza, MERS-CoV",
+  },
+  {
     label: "Academic researcher",
-    name: "Sarah Chen",
-    email: "s.chen@mit.edu",
-    institution: "Massachusetts Institute of Technology",
-    orderDetails: "S. cerevisiae TDH3 promoter fragment",
-    notes: "",
+    name: "Harris Wang",
+    email: "hw2429@columbia.edu",
+    institution: "Columbia University",
+    orderDetails: "E. coli metabolic pathway optimization cassette",
+    notes: "Synthetic biology and metabolic engineering research",
   },
   {
-    label: "Industry scientist",
-    name: "James Rivera",
-    email: "j.rivera@modernatx.com",
-    institution: "Moderna Therapeutics",
-    orderDetails: "SARS-CoV-2 spike protein RBD domain",
-    notes: "",
-  },
-  {
-    label: "International lab",
-    name: "Aiko Tanaka",
-    email: "tanaka@riken.jp",
-    institution: "RIKEN Center for Biosystems Dynamics Research",
-    orderDetails: "Mus musculus Cas9-GFP fusion construct",
-    notes: "Gene editing constructs for CRISPR knockout study",
+    label: "Biotech scientist",
+    name: "Prakrit Jena",
+    email: "prakrit@limetherapeutics.com",
+    institution: "Lime Therapeutics",
+    orderDetails: "Therapeutic protein expression vector pLT-001",
+    notes: "Drug development and therapeutic protein research",
   },
 ];
 
@@ -136,7 +136,7 @@ export default function Home() {
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-browser-id": getBrowserId() },
         body: JSON.stringify({ conversationId, content }),
       });
 

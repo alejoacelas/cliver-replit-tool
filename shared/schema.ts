@@ -12,6 +12,7 @@ import { relations } from "drizzle-orm";
 // Conversations table
 export const conversations = pgTable("conversations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  browserId: varchar("browser_id").notNull().default(""),
   title: text("title").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

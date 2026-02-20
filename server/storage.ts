@@ -10,8 +10,10 @@ import { db } from "./db";
 import { eq, desc } from "drizzle-orm";
 
 export const storage = {
-  async getConversations(): Promise<Conversation[]> {
-    return db.select().from(conversations).orderBy(desc(conversations.createdAt));
+  async getConversations(browserId: string): Promise<Conversation[]> {
+    return db.select().from(conversations)
+      .where(eq(conversations.browserId, browserId))
+      .orderBy(desc(conversations.createdAt));
   },
 
   async getConversation(id: string): Promise<Conversation | undefined> {
@@ -19,8 +21,8 @@ export const storage = {
     return conv;
   },
 
-  async createConversation(title: string): Promise<Conversation> {
-    const [created] = await db.insert(conversations).values({ title }).returning();
+  async createConversation(title: string, browserId: string): Promise<Conversation> {
+    const [created] = await db.insert(conversations).values({ title, browserId }).returning();
     return created;
   },
 
