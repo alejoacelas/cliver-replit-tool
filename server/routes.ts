@@ -11,9 +11,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // List conversations
-  app.get("/api/conversations", async (_req, res) => {
+  app.get("/api/conversations", async (req, res) => {
+    const browserId = req.headers["x-browser-id"] as string;
+    if (!browserId) {
+      return res.status(400).json({ message: "x-browser-id header is required" });
+    }
     try {
-      const convs = await storage.getConversations();
+      const convs = await storage.getConversations(browserId);
       res.json(convs);
     } catch (error) {
       console.error("Error fetching conversations:", error);
@@ -23,9 +27,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Create conversation
   app.post("/api/conversations", async (req, res) => {
+    const browserId = req.headers["x-browser-id"] as string;
+    if (!browserId) {
+      return res.status(400).json({ message: "x-browser-id header is required" });
+    }
     try {
       const { title } = req.body;
-      const conv = await storage.createConversation(title || "New screening");
+      const conv = await storage.createConversation(title || "New screening", browserId);
       res.json(conv);
     } catch (error) {
       console.error("Error creating conversation:", error);
