@@ -107,6 +107,8 @@ export default function Home() {
   const handleNewChat = () => {
     setForm(emptyForm);
     setShowOptional(false);
+    setIsStreaming(false);
+    setStreaming(initialStreamingState);
     createConversationMutation.mutate("New screening");
   };
 
@@ -298,6 +300,9 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
+                  <p className="text-xs text-muted-foreground mt-2.5">
+                    Example profiles are cached for instant results. Fresh screenings usually take 1–4 minutes.
+                  </p>
                 </div>
 
                 {/* Form */}

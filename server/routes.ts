@@ -3,6 +3,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { runPipeline } from "./pipeline";
 import { generateText } from "./openrouter";
+import { getCachedEvents, cacheEvents } from "./cache";
+import type { SSEEvent } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check
@@ -81,22 +83,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create placeholder response
       const responseRecord = await storage.createResponse(userMsg.id, "google/gemini-3-pro-preview");
 
+      // Send initial event with response ID
+      res.write(`data: ${JSON.stringify({ type: "response_id", id: responseRecord.id, messageId: userMsg.id })}\n\n`);
+
       // Update conversation title on first message
       const allMsgs = await storage.getMessages(conversationId);
       if (allMsgs.length === 1) {
-        inferTitle(conversationId, content);
+        await inferTitle(conversationId, content);
       }
-
-      // Send initial event with response ID
-      res.write(`data: ${JSON.stringify({ type: "response_id", id: responseRecord.id, messageId: userMsg.id })}\n\n`);
 
       const startTime = Date.now();
       let fullContent = "";
 
+      // Check for cached response
+      const cachedEvents = getCachedEvents(content);
+      if (cachedEvents) {
+        console.log("Serving cached response");
+        let completeData: any = null;
+
+        for (const event of cachedEvents) {
+          if (res.writableEnded) break;
+          res.write(`data: ${JSON.stringify(event)}\n\n`);
+          if (event.type === "delta") fullContent += event.content;
+          if (event.type === "complete") completeData = event.data;
+        }
+
+        if (completeData) {
+          await storage.updateResponse(responseRecord.id, {
+            content: fullContent,
+            status: "completed",
+            toolCalls: completeData,
+            duration: Date.now() - startTime,
+          });
+        }
+
+        res.write("data: [DONE]\n\n");
+        res.end();
+        return;
+      }
+
       // Run pipeline and stream events
+      const collectedEvents: SSEEvent[] = [];
+
       for await (const event of runPipeline(content)) {
         if (res.writableEnded) break;
 
+        collectedEvents.push(event);
         res.write(`data: ${JSON.stringify(event)}\n\n`);
 
         if (event.type === "delta") {
@@ -119,6 +151,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: event.message,
           });
         }
+      }
+
+      // Cache successful responses for future use
+      if (collectedEvents.some(e => e.type === "complete")) {
+        cacheEvents(content, collectedEvents);
       }
 
       res.write("data: [DONE]\n\n");
